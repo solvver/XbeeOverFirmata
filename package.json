@@ -1,0 +1,24 @@
+{
+    "name": "solvviewI_D",
+    "private": true,
+    "version": "0.0.0",
+    "description": "solvview for single-board computers",
+    "dependencies": {
+        "grunt": "0.4.1",
+        "underscore": "1.5.1",
+        "underscore.string": "2.3.0",
+        "ws": "0.4.28",
+        "xbee-api":"0.3.6",
+        "serialport":"1.4.2",
+        "firmata": "0.3.8"
+    },
+
+    "scripts": {
+        "start": "node app.js",
+        "debug": "node debug app.js"
+    },
+    "main": "app.js",
+
+    "author": "solvver solutions",
+    "license": ""
+}
