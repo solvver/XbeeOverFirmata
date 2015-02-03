@@ -26,7 +26,7 @@ serialport.on("open", function() {
     var frame ={
         type: 0x00, // xbee_api.constants.FRAME_TYPE.TX_REQUEST_64
         id: 0x52, // optional, nextFrameId() is called per default
-        destination64: "0013A200406FB3AE",
+        destination64: "0013A200406FB3A1",
         options: 0x00, // optional, 0x00 is default
         data: "read" // Can either be string or byte array.
         /*type: 0x80, // xbee_api.constants.FRAME_TYPE.RX_PACKET_64
