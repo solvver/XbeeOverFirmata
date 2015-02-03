@@ -10,7 +10,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     board.setSamplingInterval(1000);
 
-    board.setDeliveryInterval(3000);
+    board.setDeliveryInterval(10000);
 
    setTimeout(function(){
        board.pinMode(22, board.MODES.OUTPUT);

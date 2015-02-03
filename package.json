@@ -9,8 +9,8 @@
         "underscore.string": "2.3.0",
         "ws": "0.4.28",
         "xbee-api":"0.3.6",
-        "serialport":"1.4.2",
-        "firmata": "0.3.8"
+        "firmata": "0.3.8",
+        "serialport": ">=0.7.5"
     },
 
     "scripts": {

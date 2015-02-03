@@ -11,7 +11,7 @@ var util = require("util"),
   chrome = chrome || undefined,
   Encoder7Bit = require("./encoder7bit"),
   OneWireUtils = require("./onewireutils"),
-  xbee = require("../../xbee-api/lib/xbee-api.js")    //añadido por arturo 17-12-2014 16:54
+  xbee = require("../../node_modules/xbee-api/lib/xbee-api.js")    //añadido por arturo 17-12-2014 16:54
   SerialPort = null;
 
 var xbeeAPI = new xbee.XBeeAPI({             //añadido por arturo 17-12-2014   16:54
@@ -84,6 +84,7 @@ REPORT_DIGITAL = 0xD0,
 REPORT_VERSION = 0xF9,
 SAMPLING_INTERVAL = 0x7A,
 DELIVERY_INTERVAL = 0x75,
+SAMPLES_PACKET = 0x7D,
 SERVO_CONFIG = 0x70,
 START_SYSEX = 0xF0,
 STEPPER = 0x72,
@@ -106,7 +107,7 @@ var MIDI_RESPONSE = {};
 
 MIDI_RESPONSE[REPORT_VERSION] = function(board) {
     //console.log("==>PARSE report version");
-  //console.log("1.-Response==>report version");
+  console.log("1.-Response==>report version");
   board.version.major = board.currentBuffer[1];
   board.version.minor = board.currentBuffer[2];
   board.emit("reportversion");
@@ -133,6 +134,8 @@ MIDI_RESPONSE[ANALOG_MESSAGE] = function(board) {
     value: value
   });
 };
+
+
 
 /**
  * Handles a DIGITAL_MESSAGE response and emits:
@@ -171,6 +174,14 @@ MIDI_RESPONSE[DIGITAL_MESSAGE] = function(board) {
  */
 
 var SYSEX_RESPONSE = {};
+
+SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
+    console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
+    /*for (var i = 0; i < board.currentBuffer.length - 1;i++){
+        console.log(board.currentBuffer[i])
+    }*/
+
+};
 
 /**
  * Handles a QUERY_FIRMWARE response and emits the "queryfirmware" event
@@ -517,10 +528,7 @@ var Board = function(port, options, callback) {
       });
       xbeeAPI.on("frame_object", function (frame) {  //emmited when msg is available
           //console.log("OBJ> "+util.inspect(frame));
-          //console.log("frame_object EVENT:", frame.data)
-          self.sp.flush(function (err) {
-              if (err) console.log("flush error", err);
-          });
+          //console.log("frame_object EVENT:")
           if (frame.type == 0x89) {
               //console.log("Tx status");
           }
