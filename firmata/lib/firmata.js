@@ -26,7 +26,8 @@ var newFrame = {    //añadido por arturo 17-12-2014   16:54
         destination64: "0013A200406FB3A1",
         options: 0x00, // optional, 0x00 is default
         data: {},
-        data1: {}
+        data1: {},
+        data2:{}
     };
 
 
@@ -77,13 +78,13 @@ PIN_MODE = 0xF4,
 PIN_STATE_QUERY = 0x6D,
 PIN_STATE_RESPONSE = 0x6E,
 PULSE_IN = 0x74,
-PULSE_OUT = 0x73,
 QUERY_FIRMWARE = 0x79,
 REPORT_ANALOG = 0xC0,
 REPORT_DIGITAL = 0xD0,
 REPORT_VERSION = 0xF9,
 SAMPLING_INTERVAL = 0x7A,
 DELIVERY_INTERVAL = 0x75,
+SET_TIME = 0x80,
 SAMPLES_PACKET = 0x7D,
 SERVO_CONFIG = 0x70,
 START_SYSEX = 0xF0,
@@ -177,10 +178,13 @@ var SYSEX_RESPONSE = {};
 
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
-    /*for (var i = 0; i < board.currentBuffer.length - 1;i++){
-        console.log(board.currentBuffer[i])
-    }*/
-
+    for (var i = 0; i < board.currentBuffer.length - 1;i++){
+       // console.log(board.currentBuffer[i])
+        if(board.currentBuffer[i]==0x02){
+            var samples=board.currentBuffer[i+2];
+            board.emit("samples-packet", samples);
+        }
+    }
 };
 
 /**
@@ -644,6 +648,7 @@ Board.prototype.reportVersion = function(callback) {
     //console.log("2.-Emmit==>reportVersion prototype event")
     newFrame.data = REPORT_VERSION;
     newFrame.data1 = 0;
+    newFrame.data2 = 0;
     //newFrame.data.push(REPORT_VERSION);
       this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)), function (err, results) {
           if (err) console.log("writing S.P. ERROR", err, results);
@@ -769,6 +774,24 @@ Board.prototype.pinMode = function(pin, mode) {
   newFrame.data=PIN_MODE<<16 | pin<<8 | mode;
   this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
   //this.sp.write(new Buffer([PIN_MODE, pin, mode]));
+};
+
+Board.prototype.setFirmataTime = function() {
+    var date = new Date();
+    var day = (date.getDay()+16);        // yields day
+    var month = (date.getMonth()+16);    // yields month
+    var year = date.getFullYear();  // yields year
+    var hour = date.getHours()+16;     // yields hours
+    var minute = date.getMinutes()+16; // yields minutes
+    var second = date.getSeconds()+16; // yields seconds
+// After this construct a string with the above results as below
+    var time = day + "/" + month + "/" + year + " " + hour + ':' + minute + ':' + second;
+    newFrame.data=START_SYSEX<<16 | SET_TIME<<8 | (year.toString()&0x0F);                   //chapuza con 0x0F
+    newFrame.data1=   (month.toString()<<16) | (day.toString()<<8) | hour.toString();
+    newFrame.data2=   (minute.toString()<<16) | (second.toString()<<8) | END_SYSEX;
+    this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
+    newFrame.data1=0;
+    newFrame.data2=0;
 };
 
 /**
@@ -1076,13 +1099,14 @@ Board.prototype.setSamplingInterval = function(interval) {   //Ok
  // this.sp.write(new Buffer([START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX]));
 };
 
-Board.prototype.setDeliveryInterval = function(interval) {   //OK if interval===0 cancel DeliveryInterval
+Board.prototype.setDeliveryInterval = function(interval, callback) {   //OK if interval===0 cancel DeliveryInterval
     var safeint = interval < 10 ? 10 : (interval > 65535 ? 65535 : interval); // constrained 10-65535
     newFrame.data=(START_SYSEX<<8 | DELIVERY_INTERVAL)
     newFrame.data1= ( (safeint & 0xFF)<<16 | ((safeint >> 8) & 0xFF)<<8 | END_SYSEX);
     this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
     newFrame.data1=0;
     // this.sp.write(new Buffer([START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX]));
+    this.addListener("samples-packet", callback);
 };
 
 /**

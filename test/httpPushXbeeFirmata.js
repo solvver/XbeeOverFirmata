@@ -1,22 +1,34 @@
 /**
  * Created by root on 29/01/15.
  */
-var firmata=require("../node_modules/firmata");
-var https = require('http');
+var firmata=require("../firmata");
+var https = require('https');
+var url=require("url");
 var options = {
-    hostname: 'encrypted.google.com',
-    port: 2014,
-    path: '/post/channels',
-    method: 'POST'
+    hostname: 'pre.solvview.com',
+    port: 443,
+    path: '/api/back/post/channels',
+    method: 'POST',
+    headers:{
+        authentication:'{"uuid":"daq_ohlconcesiones_1","token":"RJ3FokddHWN7izYs"}'
+    }
 };
 //options.hostname='nidays.solvview.com';
 options.hostname='pre.solvview.com';
 
+//options=url.parse("https://pre.solvview.com/api/back/post/channels");
+options.headers={
+    authentication:'{"uuid":"daq_ohlconcesiones_1","token":"RJ3FokddHWN7izYs"}',
+    "Content-Type": "application/json"
+
+}
+
 var now = new Date();
 var dataframe={
+    h:{mId:"arturete"},
     b:{
         m: {
-            id: "2_1_1", sP: 1, sR: 1,sC:1, ts: now.getTime()
+            id: "2_3_1", sP: 100,sC:10,ts: now.getTime()
         }
         ,y:[1]
     },
@@ -37,7 +49,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
 
 
-
+var counter = 0;
     board.analogRead(2, function(data){
 
         var req = https.request(options, function(res) {
@@ -54,8 +66,14 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
             console.error('REQ error' ,e);
         });
        // console.log("Reading Analog0:   ", data);
-        console.log("analogRead:", data)
-        dataframe.b.y=data;
+        data=((data/1023)*5);
+
+        dataframe.b.y=[data,data,data,data,data,data,data,data,data,data];
+
+        dataframe.b.m.ts=now.getTime() + counter*1000;
+        dataframe.t = new Date(dataframe.b.m.ts);
+        console.log("analogRead:", dataframe);
+        counter++;
         req.write(JSON.stringify(dataframe));
         req.end();
     });
