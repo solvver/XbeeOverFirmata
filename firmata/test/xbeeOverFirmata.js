@@ -10,13 +10,16 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     board.setSamplingInterval(1000);
 
-    board.setDeliveryInterval(10000);
+    board.setFirmataTime()
 
-   setTimeout(function(){
-       board.pinMode(22, board.MODES.OUTPUT);
-       board.pinMode(53, board.MODES.OUTPUT);
-       board.pinMode(3, board.MODES.ANALOG);
-   },1000);
+
+        board.pinMode(3, board.MODES.ANALOG);
+
+    board.setDeliveryInterval(4000,  function(data){
+        console.log("samples-packet in front", data);
+    });
+
+
 
     setTimeout(function(){
         board.analogRead(3, function(data){
