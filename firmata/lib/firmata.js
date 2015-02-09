@@ -179,10 +179,38 @@ var SYSEX_RESPONSE = {};
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
     for (var i = 0; i < board.currentBuffer.length - 1;i++){
-       // console.log(board.currentBuffer[i])
-        if(board.currentBuffer[i]==0x02){
-            var samples=board.currentBuffer[i+2];
-            board.emit("samples-packet", samples);
+        console.log(board.currentBuffer[i])
+        if((board.currentBuffer[i]& 0xF0)==0xE0){
+            console.log("Una medida nalgalógica")
+            var value = board.currentBuffer[i+1] | (board.currentBuffer[i+2] << 7);
+            var pin = board.currentBuffer[i] & 0x0F;
+            if (board.pins[board.analogPins[pin]]) {
+                board.pins[board.analogPins[pin]].value = value;
+            }
+            board.emit("analog-read-" + pin, value);
+            board.emit("analog-read", {
+                pin: pin,
+                value: value
+            });
+        }
+
+
+        if((board.currentBuffer[i]&0xF0)==0x90){
+            console.log("Una medida digital")
+            var eigthFactor=(i/8);
+            console.log(eigthFactor)
+            var port = (board.currentBuffer[i] & 0x0F);
+            var portValue = board.currentBuffer[i+1] | (board.currentBuffer[i+2] << 7);
+            var pinNumber = 8 * port + eigthFactor;
+            var pin1 = board.pins[pinNumber];
+            if (pin1 && (pin1.mode === board.MODES.INPUT)) {
+                pin1.value = (portValue >> (i & 0x07)) & 0x01;
+                board.emit("samples-packet-" + pinNumber, pin1.value);
+                board.emit("samples-packet", {
+                    pin: pinNumber,
+                    value: pin1.value
+                });
+            }
         }
     }
 };
@@ -785,8 +813,7 @@ Board.prototype.setFirmataTime = function() {
     var minute = date.getMinutes()+16; // yields minutes
     var second = date.getSeconds()+16; // yields seconds
 // After this construct a string with the above results as below
-    var time = day + "/" + month + "/" + year + " " + hour + ':' + minute + ':' + second;
-    newFrame.data=START_SYSEX<<16 | SET_TIME<<8 | (year.toString()&0x0F);                   //chapuza con 0x0F
+    newFrame.data=START_SYSEX<<16 | SET_TIME<<8 | (year.toString()&0x0F);  //chapuza con 0x0F
     newFrame.data1=   (month.toString()<<16) | (day.toString()<<8) | hour.toString();
     newFrame.data2=   (minute.toString()<<16) | (second.toString()<<8) | END_SYSEX;
     this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
