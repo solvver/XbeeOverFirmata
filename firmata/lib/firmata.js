@@ -90,6 +90,7 @@ SERVO_CONFIG = 0x70,
 START_SYSEX = 0xF0,
 STEPPER = 0x72,
 STRING_DATA = 0x71,
+INT_DATA = 0x74,
 SYSTEM_RESET = 0xFF;
 
 /**
@@ -178,8 +179,10 @@ var SYSEX_RESPONSE = {};
 
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
+    var timeSP = new Date((0x7d0 | board.currentBuffer[2]), board.currentBuffer[3], board.currentBuffer[4], board.currentBuffer[5], board.currentBuffer[6], board.currentBuffer[7], 0);
+    console.log("fecha paquet  :", timeSP);
     for (var i = 0; i < board.currentBuffer.length - 1;i++){
-        console.log(board.currentBuffer[i])
+       // console.log(board.currentBuffer[i])
         if((board.currentBuffer[i]& 0xF0)==0xE0){
             console.log("Una medida nalgalógica")
             var value = board.currentBuffer[i+1] | (board.currentBuffer[i+2] << 7);
@@ -187,22 +190,24 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
             if (board.pins[board.analogPins[pin]]) {
                 board.pins[board.analogPins[pin]].value = value;
             }
-            board.emit("analog-read-" + pin, value);
-            board.emit("analog-read", {
+            board.emit("samples-packet-" + pin, value);
+            board.emit("samples-packet", {
                 pin: pin,
                 value: value
             });
         }
-
-
         if((board.currentBuffer[i]&0xF0)==0x90){
             console.log("Una medida digital")
-            var eigthFactor=(i/8);
-            console.log(eigthFactor)
-            var port = (board.currentBuffer[i] & 0x0F);
+           // var eigthFactor=Math.floor(i/8);
+            //console.log(eigthFactor)
+            var port = Math.floor((board.currentBuffer[i] & 0x0F)/8);
+            //console.log("port", port);
+            //console.log("board.currentBuffer[i] & 0x0F", (board.currentBuffer[i] & 0x0F));
             var portValue = board.currentBuffer[i+1] | (board.currentBuffer[i+2] << 7);
-            var pinNumber = 8 * port + eigthFactor;
+            var pinNumber = 8 * port + (board.currentBuffer[i] & 0x0F);
+            //console.log("pinNumber", pinNumber)
             var pin1 = board.pins[pinNumber];
+            //console.log("pin1.value", pin1.value)
             if (pin1 && (pin1.mode === board.MODES.INPUT)) {
                 pin1.value = (portValue >> (i & 0x07)) & 0x01;
                 board.emit("samples-packet-" + pinNumber, pin1.value);
@@ -331,7 +336,7 @@ SYSEX_RESPONSE[PIN_STATE_RESPONSE] = function (board) {
  */
 
 SYSEX_RESPONSE[ANALOG_MAPPING_RESPONSE] = function(board) {
- // console.log("9.-Response==>AnalogMappingResponse")
+  console.log("9.-Response==>AnalogMappingResponse")
   var pin = 0;
   var currentValue;
   for (var i = 2; i < board.currentBuffer.length - 1; i++) {               //board.currentBuffer.length - 1   ***
@@ -405,6 +410,11 @@ SYSEX_RESPONSE[STRING_DATA] = function(board) {
   board.emit("string", string);
 };
 
+SYSEX_RESPONSE[INT_DATA] = function(board) {
+    var number = new Buffer(board.currentBuffer.slice(2, -1)).toString("HEX").replace(/\0/g, "");
+    board.emit("int-data", number);
+};
+
 /**
  * Response from pulseIn
  */
@@ -462,7 +472,7 @@ var Board = function(port, options, callback) {
     skipCapabilities: 1,*/
     serialport: {
       baudRate: 57600,
-      bufferSize: 256
+      bufferSize: 1
     }
   };
 
@@ -562,11 +572,12 @@ var Board = function(port, options, callback) {
           //console.log("OBJ> "+util.inspect(frame));
           //console.log("frame_object EVENT:")
           if (frame.type == 0x89) {
-              //console.log("Tx status");
+              if(frame.deliveryStatus) console.log("Tx error", frame.deliveryStatus)
+              else console.log("Tx OK")
           }
           if (frame.type == 0x80) {
               //console.log("Rx 64bit addrs packet");
-              //console.log(frame.data);
+              //console.log(frame.data.toString(16));
               if (!this.versionReceived && frame.data[0] !== REPORT_VERSION) {
                   return;
               } else {
@@ -575,6 +586,7 @@ var Board = function(port, options, callback) {
 
               for (var i = 0; i < frame.data.length; i++) {
                   //console.log("Data>>", frame.data[i].toString(16));
+                  //console.log("last byte", self.currentBuffer[self.currentBuffer.length - 1]);
                   byt = frame.data[i];
                   // we dont want to push 0 as the first byte on our buffer
                   if (self.currentBuffer.length === 0 && byt === 0) {
@@ -584,7 +596,7 @@ var Board = function(port, options, callback) {
 
                       // [START_SYSEX, ... END_SYSEX]
                       if (self.currentBuffer[0] === START_SYSEX && SYSEX_RESPONSE[self.currentBuffer[1]] && self.currentBuffer[self.currentBuffer.length - 1] === END_SYSEX) {
-                          //console.log("==>STARTsYSEX")
+                          //console.log("==>Sysex message<==")
                           SYSEX_RESPONSE[self.currentBuffer[1]](self);
                           self.currentBuffer.length = 0;
                       } else if (self.currentBuffer[0] !== START_SYSEX) {
@@ -869,7 +881,7 @@ Board.prototype.queryCapabilities = function(callback) {
  */
 
 Board.prototype.queryAnalogMapping = function(callback) {
-  //  console.log("8.-Emmit==>query analog mapping")
+    console.log("8.-Emmit==>query analog mapping")
   this.once("analog-mapping-query", callback);
   newFrame.data=START_SYSEX<<16 | ANALOG_MAPPING_QUERY<<8 | END_SYSEX;
   this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
@@ -1126,14 +1138,24 @@ Board.prototype.setSamplingInterval = function(interval) {   //Ok
  // this.sp.write(new Buffer([START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX]));
 };
 
-Board.prototype.setDeliveryInterval = function(interval, callback) {   //OK if interval===0 cancel DeliveryInterval
-    var safeint = interval < 10 ? 10 : (interval > 65535 ? 65535 : interval); // constrained 10-65535
-    newFrame.data=(START_SYSEX<<8 | DELIVERY_INTERVAL)
-    newFrame.data1= ( (safeint & 0xFF)<<16 | ((safeint >> 8) & 0xFF)<<8 | END_SYSEX);
+Board.prototype.setDeliveryInterval = function(interval, callback) {   //OK if interval===0 cancel
+    if (((interval & 0xFF000000)>>24)){
+        newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | ((interval & 0xFF000000)>>24);
+        newFrame.data1=((((interval & 0x00FF0000)>>16)<<16) | (((interval & 0x0000FF00)>>8)<<8) | (interval & 0x000000FF));
+        newFrame.data2=END_SYSEX;
+    } else if (((interval & 0x00FF0000)>>16)) {
+        newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | (((interval & 0x00FF0000)>>16));
+        newFrame.data1=((((interval & 0x0000FF00)>>8)<<16) | (interval & 0x000000FF)<<8 | END_SYSEX);
+    } else {
+        newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | (((interval & 0x0000FF00)>>8));
+        newFrame.data1=((interval & 0x000000FF)<<8  |  END_SYSEX);
+    }
     this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
     newFrame.data1=0;
-    // this.sp.write(new Buffer([START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX]));
+    newFrame.data2=0;
+    //this.sp.write(new Buffer([START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX]));
     this.addListener("samples-packet", callback);
+    //this.addListener("samples-packet-" + pin, callback);
 };
 
 /**
@@ -1284,8 +1306,9 @@ Board.prototype.stepperStep = function(deviceNum, direction, steps, speed, accel
  */
 
 Board.prototype.reset = function() {
-  this.sp.write(new Buffer([SYSTEM_RESET]));
-};
+    newFrame.data=SYSTEM_RESET;
+    this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
+  };
 
 module.exports = {
   Board: Board,
