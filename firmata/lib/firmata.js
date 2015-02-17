@@ -22,7 +22,7 @@ var xbeeAPI = new xbee.XBeeAPI({             //añadido por arturo 17-12-2014   
 
 var newFrame = {    //añadido por arturo 17-12-2014   16:54
         type: 0x00, // xbee_api.constants.FRAME_TYPE.TX_REQUEST_64
-        id: 0x52, // optional, nextFrameId() is called per default
+        id: 0, // optional, nextFrameId() is called per default
         destination64: "0013A200406FB3A1",
         options: 0x00, // optional, 0x00 is default
         data: {},
@@ -177,29 +177,35 @@ MIDI_RESPONSE[DIGITAL_MESSAGE] = function(board) {
 
 var SYSEX_RESPONSE = {};
 
+
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
+    console.log("")
+    console.log("")
+    console.log("")
     console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
+    board.samplesCount = 0;
+    var pinesArray=[];
+    var valueArray=[];
+    var valueArrayIterator=0;
     var timeSP = new Date((0x7d0 | board.currentBuffer[2]), board.currentBuffer[3], board.currentBuffer[4], board.currentBuffer[5], board.currentBuffer[6], board.currentBuffer[7], 0);
-    console.log("fecha paquet  :", timeSP);
     for (var i = 0; i < board.currentBuffer.length - 1;i++){
-       // console.log(board.currentBuffer[i])
         if((board.currentBuffer[i]& 0xF0)==0xE0){
-            console.log("Una medida nalgalógica")
+            //console.log("Una medida nalgalógica")
             var value = board.currentBuffer[i+1] | (board.currentBuffer[i+2] << 7);
+            valueArray[valueArrayIterator]=value;
             var pin = board.currentBuffer[i] & 0x0F;
             if (board.pins[board.analogPins[pin]]) {
                 board.pins[board.analogPins[pin]].value = value;
             }
-            board.emit("samples-packet-" + pin, value);
+            board.emit("samples-packet-" + pin, value, timeSP);
             board.emit("samples-packet", {
                 pin: pin,
-                value: value
+                value: value,
+                time: timeSP
             });
         }
         if((board.currentBuffer[i]&0xF0)==0x90){
-            console.log("Una medida digital")
-           // var eigthFactor=Math.floor(i/8);
-            //console.log(eigthFactor)
+            console.log("Una medida digital");
             var port = Math.floor((board.currentBuffer[i] & 0x0F)/8);
             //console.log("port", port);
             //console.log("board.currentBuffer[i] & 0x0F", (board.currentBuffer[i] & 0x0F));
@@ -210,10 +216,11 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
             //console.log("pin1.value", pin1.value)
             if (pin1 && (pin1.mode === board.MODES.INPUT)) {
                 pin1.value = (portValue >> (i & 0x07)) & 0x01;
-                board.emit("samples-packet-" + pinNumber, pin1.value);
+                board.emit("samples-packet-" + pinNumber, pin1.value, timeSP);
                 board.emit("samples-packet", {
                     pin: pinNumber,
-                    value: pin1.value
+                    value: pin1.value,
+                    time: timeSP
                 });
             }
         }
@@ -336,7 +343,7 @@ SYSEX_RESPONSE[PIN_STATE_RESPONSE] = function (board) {
  */
 
 SYSEX_RESPONSE[ANALOG_MAPPING_RESPONSE] = function(board) {
-  console.log("9.-Response==>AnalogMappingResponse")
+ // console.log("9.-Response==>AnalogMappingResponse")
   var pin = 0;
   var currentValue;
   for (var i = 2; i < board.currentBuffer.length - 1; i++) {               //board.currentBuffer.length - 1   ***
@@ -534,6 +541,7 @@ var Board = function(port, options, callback) {
   this.currentBuffer = [];
   this.versionReceived = false;
   this.name = "Firmata";
+  this.samplesCount = 0;
 
   var cb=function(){
       cb.counter--;
@@ -572,7 +580,21 @@ var Board = function(port, options, callback) {
           //console.log("OBJ> "+util.inspect(frame));
           //console.log("frame_object EVENT:")
           if (frame.type == 0x89) {
-              if(frame.deliveryStatus) console.log("Tx error", frame.deliveryStatus)
+              if(frame.deliveryStatus) {
+                  console.log("Tx error");
+                  switch (frame.deliveryStatus) {
+                      case 1:
+                          console.log("No ACK received");
+                          break;
+                      case 2:
+                          console.log("CCA failure");
+                          break;
+                      case 3:
+                          console.log("Purged")
+                          break;
+                  }
+                  self.emit("repeatTx"+frame.buildState.frameId);
+              }
               else console.log("Tx OK")
           }
           if (frame.type == 0x80) {
@@ -818,7 +840,7 @@ Board.prototype.pinMode = function(pin, mode) {
 
 Board.prototype.setFirmataTime = function() {
     var date = new Date();
-    var day = (date.getDay()+16);        // yields day
+    var day = (date.getDate()+16);        // yields day
     var month = (date.getMonth()+16);    // yields month
     var year = date.getFullYear();  // yields year
     var hour = date.getHours()+16;     // yields hours
