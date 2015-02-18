@@ -8,8 +8,7 @@
         "underscore": "1.5.1",
         "underscore.string": "2.3.0",
         "ws": "0.4.28",
-        "xbee-api":"0.3.6",
-        "firmata": "0.3.8",
+        "xbee-api":"solvver/xbee-api.git#series1",
         "serialport": ">=0.7.5"
     },
 

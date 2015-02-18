@@ -25,9 +25,10 @@ var newFrame = {    //añadido por arturo 17-12-2014   16:54
         id: 0, // optional, nextFrameId() is called per default
         destination64: "0013A200406FB3A1",
         options: 0x00, // optional, 0x00 is default
-        data: {},
+        data: []
+         /*,
         data1: {},
-        data2:{}
+        data2:{}*/
     };
 
 
@@ -593,7 +594,7 @@ var Board = function(port, options, callback) {
                           console.log("Purged")
                           break;
                   }
-                  self.emit("repeatTx"+frame.buildState.frameId);
+                  //self.emit("repeatTx"+frame.buildState.frameId);
               }
               else console.log("Tx OK")
           }
@@ -708,13 +709,16 @@ util.inherits(Board, Emitter);
 Board.prototype.reportVersion = function(callback) {
   this.once("reportversion", callback);
     //console.log("2.-Emmit==>reportVersion prototype event")
-    newFrame.data = REPORT_VERSION;
-    newFrame.data1 = 0;
-    newFrame.data2 = 0;
+    //newFrame.data = REPORT_VERSION;
+    newFrame.data.push(REPORT_VERSION);
+    console.log("typeof",typeof(newFrame.data))
+    //newFrame.data1 = 0;
+    //newFrame.data2 = 0;
     //newFrame.data.push(REPORT_VERSION);
-      this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)), function (err, results) {
+      /*this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)), function (err, results) {
           if (err) console.log("writing S.P. ERROR", err, results);
-      });
+      });*/
+    this.sp.write(xbeeAPI.buildFrame(newFrame));
 };
 
 /**
@@ -725,8 +729,9 @@ Board.prototype.reportVersion = function(callback) {
 Board.prototype.queryFirmware = function(callback) {
     //console.log("3.-Emmit==>Query firmware event")
   this.once("queryfirmware", callback);
-  newFrame.data=START_SYSEX<<16 | QUERY_FIRMWARE<<8 | END_SYSEX;
-  this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)), function(err, results){
+ // newFrame.data=START_SYSEX<<16 | QUERY_FIRMWARE<<8 | END_SYSEX;
+    newFrame.data.unshift(START_SYSEX, QUERY_FIRMWARE, END_SYSEX)
+    this.sp.write(xbeeAPI.buildFrame(newFrame), function(err, results){
      if (err) console.log("writing S.P. ERROR", err, results);
   });
 };
@@ -832,27 +837,30 @@ Board.prototype.servoWrite = function(pin, value) {
  */
 
 Board.prototype.pinMode = function(pin, mode) {
+  newFrame.data=[];
   this.pins[pin].mode = mode;
-  newFrame.data=PIN_MODE<<16 | pin<<8 | mode;
-  this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
+  //newFrame.data=PIN_MODE<<16 | pin<<8 | mode;
+  newFrame.data.unshift(PIN_MODE,pin,mode);
+  this.sp.write(xbeeAPI.buildFrame(newFrame));
   //this.sp.write(new Buffer([PIN_MODE, pin, mode]));
 };
 
 Board.prototype.setFirmataTime = function() {
+    newFrame.data=[];
     var date = new Date();
     var day = (date.getDate()+16);        // yields day
     var month = (date.getMonth()+16);    // yields month
-    var year = date.getFullYear();  // yields year
+    var year = ((date.getFullYear()&0x0F)+16);  // yields year
     var hour = date.getHours()+16;     // yields hours
     var minute = date.getMinutes()+16; // yields minutes
     var second = date.getSeconds()+16; // yields seconds
 // After this construct a string with the above results as below
-    newFrame.data=START_SYSEX<<16 | SET_TIME<<8 | (year.toString()&0x0F);  //chapuza con 0x0F
+   /* newFrame.data=START_SYSEX<<16 | SET_TIME<<8 | (year.toString()&0x0F);  //chapuza con 0x0F
     newFrame.data1=   (month.toString()<<16) | (day.toString()<<8) | hour.toString();
-    newFrame.data2=   (minute.toString()<<16) | (second.toString()<<8) | END_SYSEX;
-    this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
-    newFrame.data1=0;
-    newFrame.data2=0;
+    newFrame.data2=   (minute.toString()<<16) | (second.toString()<<8) | END_SYSEX;*/
+    newFrame.data.unshift(START_SYSEX, SET_TIME, year.toString(), month.toString(16), day.toString(16), hour.toString(16), day.toString(16), hour.toString(16), minute.toString(16), second.toString(16), END_SYSEX);
+    console.log(newFrame.data);
+    this.sp.write(xbeeAPI.buildFrame(newFrame));
 };
 
 /**
@@ -893,8 +901,9 @@ Board.prototype.digitalRead = function(pin, callback) {
 Board.prototype.queryCapabilities = function(callback) {
   this.once("capability-query", callback);
  // console.log("5.-Emmit==>queryCapabilities")
-  newFrame.data=START_SYSEX<<16 | CAPABILITY_QUERY<<8 | END_SYSEX;
-  this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
+ // newFrame.data=START_SYSEX<<16 | CAPABILITY_QUERY<<8 | END_SYSEX;
+  newFrame.data.unshift(START_SYSEX, CAPABILITY_QUERY, END_SYSEX);
+  this.sp.write(xbeeAPI.buildFrame(newFrame));
 };
 
 /**
@@ -903,10 +912,11 @@ Board.prototype.queryCapabilities = function(callback) {
  */
 
 Board.prototype.queryAnalogMapping = function(callback) {
-    console.log("8.-Emmit==>query analog mapping")
+   // console.log("8.-Emmit==>query analog mapping")
   this.once("analog-mapping-query", callback);
-  newFrame.data=START_SYSEX<<16 | ANALOG_MAPPING_QUERY<<8 | END_SYSEX;
-  this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
+ // newFrame.data=START_SYSEX<<16 | ANALOG_MAPPING_QUERY<<8 | END_SYSEX;
+  newFrame.data.unshift(START_SYSEX, ANALOG_MAPPING_QUERY, END_SYSEX);
+  this.sp.write(xbeeAPI.buildFrame(newFrame));
 };
 
 /**
@@ -1153,29 +1163,37 @@ Board.prototype._sendOneWireRequest = function(pin, subcommand, device, numBytes
 
 Board.prototype.setSamplingInterval = function(interval) {   //Ok
   var safeint = interval < 10 ? 10 : (interval > 65535 ? 65535 : interval); // constrained 10-65535
-    newFrame.data=(START_SYSEX<<8 | SAMPLING_INTERVAL)
-    newFrame.data1= ( (safeint & 0xFF)<<16 | ((safeint >> 8) & 0xFF)<<8 | END_SYSEX);
-    this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
-    newFrame.data1=0;
- // this.sp.write(new Buffer([START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX]));
+   // newFrame.data=(START_SYSEX<<8 | SAMPLING_INTERVAL)
+   // newFrame.data1= ( (safeint & 0xFF)<<16 | ((safeint >> 8) & 0xFF)<<8 | END_SYSEX);
+    newFrame.data=[];
+    if (((safeint >> 8) & 0xFF)==0){
+        newFrame.data.unshift(START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), END_SYSEX);
+    } else {
+        newFrame.data.unshift(START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX);
+    }
+   // newFrame.data.unshift(START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX); //((safeint >> 8) & 0xFF)
+    console.log("newFrame.data", newFrame.data);
+    this.sp.write(xbeeAPI.buildFrame(newFrame));
 };
 
 Board.prototype.setDeliveryInterval = function(interval, callback) {   //OK if interval===0 cancel
+    newFrame.data=[];
     if (((interval & 0xFF000000)>>24)){
-        newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | ((interval & 0xFF000000)>>24);
+        /*newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | ((interval & 0xFF000000)>>24);
         newFrame.data1=((((interval & 0x00FF0000)>>16)<<16) | (((interval & 0x0000FF00)>>8)<<8) | (interval & 0x000000FF));
-        newFrame.data2=END_SYSEX;
+        newFrame.data2=END_SYSEX;*/
+        newFrame.data.unshift(START_SYSEX, DELIVERY_INTERVAL, (interval & 0xFF000000), ((interval & 0x00FF0000)>>16), ((interval & 0x0000FF00)>>8), (interval & 0x000000FF), END_SYSEX);
     } else if (((interval & 0x00FF0000)>>16)) {
-        newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | (((interval & 0x00FF0000)>>16));
-        newFrame.data1=((((interval & 0x0000FF00)>>8)<<16) | (interval & 0x000000FF)<<8 | END_SYSEX);
+        /*newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | (((interval & 0x00FF0000)>>16));
+        newFrame.data1=((((interval & 0x0000FF00)>>8)<<16) | (interval & 0x000000FF)<<8 | END_SYSEX);*/
+        newFrame.data.unshift(START_SYSEX, DELIVERY_INTERVAL, ((interval & 0x00FF0000)>>16), ((interval & 0x0000FF00)>>8), (interval & 0x000000FF), END_SYSEX);
     } else {
-        newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | (((interval & 0x0000FF00)>>8));
-        newFrame.data1=((interval & 0x000000FF)<<8  |  END_SYSEX);
+       /* newFrame.data=START_SYSEX<<16| DELIVERY_INTERVAL<<8 | (((interval & 0x0000FF00)>>8));
+        newFrame.data1=((interval & 0x000000FF)<<8  |  END_SYSEX);*/
+        newFrame.data.unshift(START_SYSEX, DELIVERY_INTERVAL, ((interval & 0x0000FF00)>>8), (interval & 0x000000FF), END_SYSEX);
     }
-    this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
-    newFrame.data1=0;
-    newFrame.data2=0;
-    //this.sp.write(new Buffer([START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX]));
+    console.log(newFrame.data)
+    this.sp.write(xbeeAPI.buildFrame(newFrame));
     this.addListener("samples-packet", callback);
     //this.addListener("samples-packet-" + pin, callback);
 };
@@ -1189,8 +1207,9 @@ Board.prototype.setDeliveryInterval = function(interval, callback) {   //OK if i
 Board.prototype.reportAnalogPin = function(pin, value) {
   if (value === 0 || value === 1) {
     this.pins[this.analogPins[pin]].report = value;
-    newFrame.data=REPORT_ANALOG<<16 | pin<<8 | value;
-    this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
+    //newFrame.data=REPORT_ANALOG<<16 | pin<<8 | value;
+    newFrame.data.unshift(REPORT_ANALOG, pin, value);
+    this.sp.write(xbeeAPI.buildFrame(newFrame));
    // this.sp.write(new Buffer([REPORT_ANALOG | pin, value]));
   }
 };
@@ -1207,8 +1226,9 @@ Board.prototype.reportDigitalPin = function(pin, value) {
   console.log(port);
   if (value === 0 || value === 1) {
     this.pins[pin].report = value;
-    newFrame.data=(REPORT_DIGITAL | port)<<8 | value;
-    this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
+    //newFrame.data=(REPORT_DIGITAL | port)<<8 | value;
+  newFrame.data.unshift(REPORT_DIGITAL, port, value);
+  this.sp.write(xbeeAPI.buildFrame(newFrame));
   }
 };
 
@@ -1328,7 +1348,8 @@ Board.prototype.stepperStep = function(deviceNum, direction, steps, speed, accel
  */
 
 Board.prototype.reset = function() {
-    newFrame.data=SYSTEM_RESET;
+    //newFrame.data=SYSTEM_RESET;
+    newFrame.data.unshift(SYSTEM_RESET);
     this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
   };
 
