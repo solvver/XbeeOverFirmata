@@ -23,7 +23,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
 
     setTimeout(function(){
-        board.setDeliveryInterval(5000,  function(value) {  //65535 reset to streaming mode
+        board.setDeliveryInterval(2000,  function(value) {  //65535 reset to streaming mode
             console.log("samples-packet in front", value);
         });
 
@@ -35,12 +35,22 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
     board.pinMode(3, board.MODES.ANALOG);
     }, 1200);
 
+    setTimeout(function(){
+        board.pinMode(5, board.MODES.ANALOG);
+    }, 1300);
 
     setTimeout(function(){
        board.analogRead(3, function(data){
             console.log("Reading analog:   ", data);
         });
-    },1300);
+    },1400);
+
+    setTimeout(function(){
+        board.analogRead(5, function(data){
+            console.log("Reading analog:   ", data);
+        });
+    },1500);
+
   /*
    setTimeout(function(){
   board.pinMode(5, board.MODES.ANALOG);

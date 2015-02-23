@@ -184,11 +184,12 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     console.log("")
     console.log("")
     console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
+    console.log("board.currentBuffer", board.currentBuffer.toString(16));
     board.samplesCount = 0;
     var pinesArray=[];
     var valueArray=[];
     var valueArrayIterator=0;
-    var timeSP = new Date((0x7d0 | board.currentBuffer[2]), board.currentBuffer[3], board.currentBuffer[4], board.currentBuffer[5], board.currentBuffer[6], board.currentBuffer[7], 0);
+    var timeSP = new Date((0x7d0 | board.currentBuffer[3]), board.currentBuffer[4], board.currentBuffer[5], board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], 0);
     for (var i = 0; i < board.currentBuffer.length - 1;i++){
         if((board.currentBuffer[i]& 0xF0)==0xE0){
             //console.log("Una medida nalgalógica")
@@ -707,8 +708,9 @@ util.inherits(Board, Emitter);
  */
 
 Board.prototype.reportVersion = function(callback) {
+  newFrame.data=[];
   this.once("reportversion", callback);
-    //console.log("2.-Emmit==>reportVersion prototype event")
+    console.log("2.-Emmit==>reportVersion prototype event")
     //newFrame.data = REPORT_VERSION;
     newFrame.data.push(REPORT_VERSION);
     console.log("typeof",typeof(newFrame.data))
@@ -728,7 +730,8 @@ Board.prototype.reportVersion = function(callback) {
 
 Board.prototype.queryFirmware = function(callback) {
     //console.log("3.-Emmit==>Query firmware event")
-  this.once("queryfirmware", callback);
+    newFrame.data=[];
+    this.once("queryfirmware", callback);
  // newFrame.data=START_SYSEX<<16 | QUERY_FIRMWARE<<8 | END_SYSEX;
     newFrame.data.unshift(START_SYSEX, QUERY_FIRMWARE, END_SYSEX)
     this.sp.write(xbeeAPI.buildFrame(newFrame), function(err, results){
@@ -743,6 +746,7 @@ Board.prototype.queryFirmware = function(callback) {
  */
 
 Board.prototype.analogRead = function(pin, callback) {
+  newFrame.data=[];
   this.reportAnalogPin(pin, 1);
   this.addListener("analog-read-" + pin, callback);
 };
@@ -848,17 +852,24 @@ Board.prototype.pinMode = function(pin, mode) {
 Board.prototype.setFirmataTime = function() {
     newFrame.data=[];
     var date = new Date();
-    var day = (date.getDate()+16);        // yields day
+   /* var day = (date.getDate()+16);        // yields day
     var month = (date.getMonth()+16);    // yields month
     var year = ((date.getFullYear()&0x0F)+16);  // yields year
     var hour = date.getHours()+16;     // yields hours
     var minute = date.getMinutes()+16; // yields minutes
-    var second = date.getSeconds()+16; // yields seconds
+    var second = date.getSeconds()+16; // yields seconds*/
+    var day = (date.getDate());        // yields day
+    var month = (date.getMonth());    // yields month
+    var year = ((date.getFullYear()&0x0F));  // yields year
+    var hour = date.getHours();     // yields hours
+    var minute = date.getMinutes(); // yields minutes
+    var second = date.getSeconds();
+    console.log("hours", hour, "minute", minute, "seconds", second);
 // After this construct a string with the above results as below
    /* newFrame.data=START_SYSEX<<16 | SET_TIME<<8 | (year.toString()&0x0F);  //chapuza con 0x0F
     newFrame.data1=   (month.toString()<<16) | (day.toString()<<8) | hour.toString();
     newFrame.data2=   (minute.toString()<<16) | (second.toString()<<8) | END_SYSEX;*/
-    newFrame.data.unshift(START_SYSEX, SET_TIME, year.toString(), month.toString(16), day.toString(16), hour.toString(16), day.toString(16), hour.toString(16), minute.toString(16), second.toString(16), END_SYSEX);
+    newFrame.data.unshift(START_SYSEX, SET_TIME, year.toString(), month.toString(16), day.toString(16),  hour.toString(16), minute.toString(16), second.toString(16), END_SYSEX);
     console.log(newFrame.data);
     this.sp.write(xbeeAPI.buildFrame(newFrame));
 };
@@ -889,6 +900,7 @@ Board.prototype.digitalWrite = function(pin, value) {
  */
 
 Board.prototype.digitalRead = function(pin, callback) {
+  newFrame.data=[];
   this.reportDigitalPin(pin, 1);
   this.addListener("digital-read-" + pin, callback);
 };
@@ -900,6 +912,7 @@ Board.prototype.digitalRead = function(pin, callback) {
 
 Board.prototype.queryCapabilities = function(callback) {
   this.once("capability-query", callback);
+  newFrame.data=[];
  // console.log("5.-Emmit==>queryCapabilities")
  // newFrame.data=START_SYSEX<<16 | CAPABILITY_QUERY<<8 | END_SYSEX;
   newFrame.data.unshift(START_SYSEX, CAPABILITY_QUERY, END_SYSEX);
@@ -913,6 +926,7 @@ Board.prototype.queryCapabilities = function(callback) {
 
 Board.prototype.queryAnalogMapping = function(callback) {
    // console.log("8.-Emmit==>query analog mapping")
+  newFrame.data=[];
   this.once("analog-mapping-query", callback);
  // newFrame.data=START_SYSEX<<16 | ANALOG_MAPPING_QUERY<<8 | END_SYSEX;
   newFrame.data.unshift(START_SYSEX, ANALOG_MAPPING_QUERY, END_SYSEX);
@@ -1205,6 +1219,7 @@ Board.prototype.setDeliveryInterval = function(interval, callback) {   //OK if i
  */
 
 Board.prototype.reportAnalogPin = function(pin, value) {
+  newFrame.data=[];
   if (value === 0 || value === 1) {
     this.pins[this.analogPins[pin]].report = value;
     //newFrame.data=REPORT_ANALOG<<16 | pin<<8 | value;
@@ -1221,6 +1236,7 @@ Board.prototype.reportAnalogPin = function(pin, value) {
  */
 
 Board.prototype.reportDigitalPin = function(pin, value) {
+  newFrame.data=[];
   var port = Math.floor(pin / 8);
   console.log("reportDigitalPin  port:");
   console.log(port);
@@ -1348,6 +1364,7 @@ Board.prototype.stepperStep = function(deviceNum, direction, steps, speed, accel
  */
 
 Board.prototype.reset = function() {
+    newFrame.data=[];
     //newFrame.data=SYSTEM_RESET;
     newFrame.data.unshift(SYSTEM_RESET);
     this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
