@@ -56,8 +56,8 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
         //console.log("sample packet in front", data)
 
        dataframe = buildSolvviewDataFrame();
-       dataframe.b.m.ts = data.time;
-       dataframe.b.y=data.value;
+       dataframe.b.m.ts = data.TS;
+       dataframe.b.y=data.samples;
 
 
 

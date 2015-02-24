@@ -179,19 +179,22 @@ MIDI_RESPONSE[DIGITAL_MESSAGE] = function(board) {
 var SYSEX_RESPONSE = {};
 
 
-SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
+/*SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     console.log("")
     console.log("")
     console.log("")
     console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
     console.log("board.currentBuffer", board.currentBuffer.toString(16));
-    board.samplesCount = 0;
+    board.samplesCount = board.currentBuffer[2];
+    var numberPayloads=board.currentBuffer[3];
+    contPayloads = numberPayloads;
     var pinesArray=[];
     var valueArray=[];
     var valueArrayIterator=0;
-    var timeSP = new Date((0x7d0 | board.currentBuffer[3]), board.currentBuffer[4], board.currentBuffer[5], board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], 0);
+    var timeSP = new Date((0x7d0 | board.currentBuffer[4]), board.currentBuffer[5], board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], board.currentBuffer[9], 0);
     for (var i = 0; i < board.currentBuffer.length - 1;i++){
         if((board.currentBuffer[i]& 0xF0)==0xE0){
+            numberChannels--;
             //console.log("Una medida nalgalógica")
             var value = board.currentBuffer[i+1] | (board.currentBuffer[i+2] << 7);
             valueArray[valueArrayIterator]=value;
@@ -227,8 +230,61 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
             }
         }
     }
-};
+};*/
 
+SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
+    console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
+    console.log("board.currentBuffer", board.currentBuffer.toString(16));
+    if (board.firstPayload==true){
+        console.log("first payload");
+        board.samplesCount = board.currentBuffer[2];
+        board.numberChannels=board.currentBuffer[3];
+        console.log("board.numberChannels", board.numberChannels)
+        board.numPayloads=board.currentBuffer[4];
+        var timeSP = new Date((0x7d0 | board.currentBuffer[5]), board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], board.currentBuffer[9], board.currentBuffer[10], 0);
+        var pin=[];
+        var samples = new Array();
+        var reading=false;
+        var samplesRead=0;
+        board.firstPayload=false;
+        var iterator=9;
+    } else {
+        var iterator=0;
+    }
+    for(iterator; iterator<board.currentBuffer.length - 1;iterator++){
+        if((board.currentBuffer[iterator]& 0xF0)==0xE0 || reading==true){
+            //console.log("one analog channel");
+            if (reading==false) {
+                pin=board.currentBuffer[iterator] & 0x0F;
+                samplesRead=board.samplesCount;
+                //console.log("storing pin & samplesRead",samplesRead);
+                board.numberChannels--;
+            }
+            reading=true;
+            if (reading==true){
+                value=board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
+                iterator++;
+                //console.log("samplesReadValue", samplesRead);
+                samplesRead--;
+                samples.push(value);
+            }
+            /*if (board.pins[board.analogPins[pin]]) {
+                board.pins[board.analogPins[pin]].value = value;
+            }*/
+            if (samplesRead==0) {
+                reading=false;
+                //console.log("board.numberChannels--", board.numberChannels)
+                if (board.numberChannels==0) board.firstPayload=true;
+               board.emit("samples-packet", {
+                    pin: pin,
+                    samples: samples,
+                    SC:board.samplesCount,
+                    TS: timeSP
+                });
+            }
+        }
+    }
+}
 /**
  * Handles a QUERY_FIRMWARE response and emits the "queryfirmware" event
  * @private
@@ -262,7 +318,6 @@ SYSEX_RESPONSE[CAPABILITY_RESPONSE] = function(board) {
       modesArray.push(board.MODES[mode]);
     }
   }
-
   // Only create pins if none have been previously created on the instance.
   if (!board.pins.length) {
     for (var i = 2, n = 0; i < board.currentBuffer.length - 1; i++) {
@@ -544,6 +599,9 @@ var Board = function(port, options, callback) {
   this.versionReceived = false;
   this.name = "Firmata";
   this.samplesCount = 0;
+  this.numPayloads;
+  this.firstPayload=true;
+  this.numberChannels;
 
   var cb=function(){
       cb.counter--;
@@ -852,6 +910,7 @@ Board.prototype.pinMode = function(pin, mode) {
 Board.prototype.setFirmataTime = function() {
     newFrame.data=[];
     var date = new Date();
+    console.log(date.getTime())
    /* var day = (date.getDate()+16);        // yields day
     var month = (date.getMonth()+16);    // yields month
     var year = ((date.getFullYear()&0x0F)+16);  // yields year
@@ -864,12 +923,11 @@ Board.prototype.setFirmataTime = function() {
     var hour = date.getHours();     // yields hours
     var minute = date.getMinutes(); // yields minutes
     var second = date.getSeconds();
-    console.log("hours", hour, "minute", minute, "seconds", second);
 // After this construct a string with the above results as below
    /* newFrame.data=START_SYSEX<<16 | SET_TIME<<8 | (year.toString()&0x0F);  //chapuza con 0x0F
     newFrame.data1=   (month.toString()<<16) | (day.toString()<<8) | hour.toString();
     newFrame.data2=   (minute.toString()<<16) | (second.toString()<<8) | END_SYSEX;*/
-    newFrame.data.unshift(START_SYSEX, SET_TIME, year.toString(), month.toString(16), day.toString(16),  hour.toString(16), minute.toString(16), second.toString(16), END_SYSEX);
+    newFrame.data.unshift(START_SYSEX, SET_TIME, year.toString(10), month.toString(16), day.toString(16),  hour.toString(16), minute.toString(16), second.toString(16), END_SYSEX);
     console.log(newFrame.data);
     this.sp.write(xbeeAPI.buildFrame(newFrame));
 };

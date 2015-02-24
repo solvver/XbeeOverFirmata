@@ -11,7 +11,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
     //board.reset();
 
     setTimeout(function(){
-        board.setSamplingInterval(1000);
+        board.setSamplingInterval(100);
 
     },500);
 
@@ -23,33 +23,55 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
 
     setTimeout(function(){
-        board.setDeliveryInterval(2000,  function(value) {  //65535 reset to streaming mode
+        board.setDeliveryInterval(1000,  function(value) {  //65535 reset to streaming mode
             console.log("samples-packet in front", value);
         });
-
-
-    },1100);
+    },900);
 
 
     setTimeout(function(){
     board.pinMode(3, board.MODES.ANALOG);
-    }, 1200);
+    }, 1100);
 
-    setTimeout(function(){
+    /*setTimeout(function(){
         board.pinMode(5, board.MODES.ANALOG);
-    }, 1300);
+    }, 1200);
+    setTimeout(function(){
+        board.pinMode(4, board.MODES.ANALOG);
+    }, 1300);*/
+
+    /*setTimeout(function(){
+        board.pinMode(6, board.MODES.INPUT);
+    }, 1400);*/
+
+
 
     setTimeout(function(){
        board.analogRead(3, function(data){
             console.log("Reading analog:   ", data);
         });
-    },1400);
+    },1500);
 
-    setTimeout(function(){
+   /* setTimeout(function(){
         board.analogRead(5, function(data){
             console.log("Reading analog:   ", data);
         });
-    },1500);
+    },1600);
+
+    setTimeout(function(){
+        board.analogRead(4, function(data){
+            console.log("Reading analog:   ", data);
+        });
+    },1700);*/
+
+    /*setTimeout(function(){
+        board.digitalRead(6, function(data){
+            console.log("Reading analog:   ", data);
+        });
+    },1800);*/
+
+
+
 
   /*
    setTimeout(function(){
