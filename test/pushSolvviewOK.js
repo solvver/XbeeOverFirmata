@@ -57,7 +57,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
        dataframe = buildSolvviewDataFrame();
        dataframe.b.m.ts = data.TS;
-       dataframe.b.y=data.samples;
+       dataframe.b.y=[data.samples[0], data.samples[1], data.samples[2], data.samples[3], data.samples[4], data.samples[5], data.samples[6], data.samples[7], data.samples[8], data.samples[9]];
 
 
 
