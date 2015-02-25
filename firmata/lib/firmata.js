@@ -235,11 +235,9 @@ var SYSEX_RESPONSE = {};
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
     console.log("board.currentBuffer", board.currentBuffer.toString(16));
-    if (board.firstPayload==true){
-        console.log("first payload");
+    if (board.firstPayload==true || board.currentBuffer[4]==0){
         board.samplesCount = board.currentBuffer[2];
         board.numberChannels=board.currentBuffer[3];
-        console.log("board.numberChannels", board.numberChannels)
         board.numPayloads=board.currentBuffer[4];
         var timeSP = new Date((0x7d0 | board.currentBuffer[5]), board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], board.currentBuffer[9], board.currentBuffer[10], 0);
         var pin=[];
@@ -253,34 +251,34 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     }
     for(iterator; iterator<board.currentBuffer.length - 1;iterator++){
         if((board.currentBuffer[iterator]& 0xF0)==0xE0 || reading==true){
-            //console.log("one analog channel");
-            if (reading==false) {
-                pin=board.currentBuffer[iterator] & 0x0F;
-                samplesRead=board.samplesCount;
-                //console.log("storing pin & samplesRead",samplesRead);
-                board.numberChannels--;
-            }
-            reading=true;
             if (reading==true){
                 value=board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
                 iterator++;
                 //console.log("samplesReadValue", samplesRead);
                 samplesRead--;
+                //value=(value/1023)*5;
+                value=parseFloat((value / 1023) * 5).toFixed(3);
                 samples.push(value);
+            }
+            if (reading==false) {
+                pin=board.currentBuffer[iterator] & 0x0F;
+                samplesRead=board.samplesCount;
+                //console.log("storing pin & samplesRead",samplesRead);
+                board.numberChannels--;
+                reading=true;
             }
             /*if (board.pins[board.analogPins[pin]]) {
                 board.pins[board.analogPins[pin]].value = value;
             }*/
             if (samplesRead==0) {
                 reading=false;
-                //console.log("board.numberChannels--", board.numberChannels)
                 if (board.numberChannels==0) board.firstPayload=true;
-               board.emit("samples-packet", {
+                    board.emit("samples-packet", {
                     pin: pin,
                     samples: samples,
                     SC:board.samplesCount,
                     TS: timeSP
-                });
+                     });
             }
         }
     }
@@ -910,25 +908,15 @@ Board.prototype.pinMode = function(pin, mode) {
 Board.prototype.setFirmataTime = function() {
     newFrame.data=[];
     var date = new Date();
-    console.log(date.getTime())
-   /* var day = (date.getDate()+16);        // yields day
-    var month = (date.getMonth()+16);    // yields month
-    var year = ((date.getFullYear()&0x0F)+16);  // yields year
-    var hour = date.getHours()+16;     // yields hours
-    var minute = date.getMinutes()+16; // yields minutes
-    var second = date.getSeconds()+16; // yields seconds*/
     var day = (date.getDate());        // yields day
     var month = (date.getMonth());    // yields month
     var year = ((date.getFullYear()&0x0F));  // yields year
     var hour = date.getHours();     // yields hours
     var minute = date.getMinutes(); // yields minutes
     var second = date.getSeconds();
-// After this construct a string with the above results as below
-   /* newFrame.data=START_SYSEX<<16 | SET_TIME<<8 | (year.toString()&0x0F);  //chapuza con 0x0F
-    newFrame.data1=   (month.toString()<<16) | (day.toString()<<8) | hour.toString();
-    newFrame.data2=   (minute.toString()<<16) | (second.toString()<<8) | END_SYSEX;*/
-    newFrame.data.unshift(START_SYSEX, SET_TIME, year.toString(10), month.toString(16), day.toString(16),  hour.toString(16), minute.toString(16), second.toString(16), END_SYSEX);
-    console.log(newFrame.data);
+   // newFrame.data.unshift(START_SYSEX, SET_TIME, year.toString(16), month.toString(16), day.toString(16),  hour.toString(16), minute.toString(16), second.toString(16), END_SYSEX);
+    newFrame.data.unshift(START_SYSEX, SET_TIME, year, month, day,  hour, minute, second, END_SYSEX);
+    console.log(newFrame.data)
     this.sp.write(xbeeAPI.buildFrame(newFrame));
 };
 
@@ -1244,7 +1232,7 @@ Board.prototype.setSamplingInterval = function(interval) {   //Ok
         newFrame.data.unshift(START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX);
     }
    // newFrame.data.unshift(START_SYSEX, SAMPLING_INTERVAL, (safeint & 0xFF), ((safeint >> 8) & 0xFF), END_SYSEX); //((safeint >> 8) & 0xFF)
-    console.log("newFrame.data", newFrame.data);
+   // console.log("newFrame.data", newFrame.data);
     this.sp.write(xbeeAPI.buildFrame(newFrame));
 };
 
@@ -1264,7 +1252,6 @@ Board.prototype.setDeliveryInterval = function(interval, callback) {   //OK if i
         newFrame.data1=((interval & 0x000000FF)<<8  |  END_SYSEX);*/
         newFrame.data.unshift(START_SYSEX, DELIVERY_INTERVAL, ((interval & 0x0000FF00)>>8), (interval & 0x000000FF), END_SYSEX);
     }
-    console.log(newFrame.data)
     this.sp.write(xbeeAPI.buildFrame(newFrame));
     this.addListener("samples-packet", callback);
     //this.addListener("samples-packet-" + pin, callback);

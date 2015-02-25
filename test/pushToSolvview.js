@@ -20,7 +20,6 @@ options.hostname='pre.solvview.com';
 options.headers={
     authentication:'{"uuid":"daq_ohlconcesiones_1","token":"RJ3FokddHWN7izYs"}',
     "Content-Type": "application/json"
-
 };
 
 var now = new Date();
@@ -28,7 +27,6 @@ var now = new Date();
 function buildSolvviewDataFrame() {
     var dataframe = {
         h: {mId: "arturete"},
-
         b: {
             m: {
                 id: "2_3_1", sP: 100, sC: 10, ts: now.getTime()
@@ -47,25 +45,20 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     console.log("Firmware: " + board.firmware.name + "-" + board.firmware.version.major + "." + board.firmware.version.minor);
 
-    board.setFirmataTime();
 
     board.setSamplingInterval(100);
 
+    board.setFirmataTime();
 
-    board.setDeliveryInterval(1000,  function(data){  //65535 reset to streaming mode
+     board.setDeliveryInterval(1000,  function(data){  //65535 reset to streaming mode
         //console.log("sample packet in front", data)
+        dataframe = buildSolvviewDataFrame();
+        dataframe.b.m.ts = (data.TS);
 
-
-        if (board.samplesCount==0) {
-            dataframe = buildSolvviewDataFrame();
-            dataframe.b.m.ts = data.time;
+        for(var i=0;i<data.SC;i++) {
+            dataframe.b.y[i] = data.samples[i];
         }
-        data.value=((data.value/1023)*5);
-        dataframe.b.y[board.samplesCount]=data.value;
 
-        console.log("%&$$$$$$$", board.samplesCount, "  y  ", dataframe.b.y[board.samplesCount])
-
-        if (board.samplesCount==9) {
             var req = https.request(options, function (res) {
                 console.log("statusCode: ", res.statusCode);
                 console.log("headers: ", res.headers);
@@ -82,14 +75,10 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
             console.log(">>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<")
             req.write(JSON.stringify(dataframe));
             req.end();
-        }
         board.samplesCount++;
     });
-
     board.pinMode(3, board.MODES.ANALOG);
-
     board.analogRead(3, function(data){
         console.log("Reading analog:   ", data);
     });
-
 });
