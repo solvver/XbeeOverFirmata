@@ -44,41 +44,60 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
     }
 
     console.log("Firmware: " + board.firmware.name + "-" + board.firmware.version.major + "." + board.firmware.version.minor);
+    board.reset();
 
-
+    setTimeout(function(){
     board.setSamplingInterval(100);
 
     board.setFirmataTime();
 
-     board.setDeliveryInterval(1000,  function(data){  //65535 reset to streaming mode
-        //console.log("sample packet in front", data)
+    board.setDeliveryInterval(1000,  function(data){  //65535 reset to streaming mode
+        //console.log("#################", cont, "#################");
         dataframe = buildSolvviewDataFrame();
         dataframe.b.m.ts = (data.TS);
-
+         dataframe.t= new Date (data.TS);
         for(var i=0;i<data.SC;i++) {
             dataframe.b.y[i] = data.samples[i];
         }
 
-            var req = https.request(options, function (res) {
-                console.log("statusCode: ", res.statusCode);
-                console.log("headers: ", res.headers);
 
+            var req = https.request(options, function (res) {
+                //console.log("++++++++++++++++++++++++", cont, "++++++++++++++++++++++++");
+                //console.log("statusCode: ", res.statusCode);
+                //console.log("headers: ", res.headers);
+                if(res.statusCode != 200) {
+                    console.log("statusCode != 200", res.statusCode);
+                }
+                console.log(res.read())
                 res.on('data', function (d) {
                     console.log("##############data#################");
                     process.stdout.write(d);
                 });
+               // console.log("++++++++++++++++++++++++", cont++, "++++++++++++++++++++++++");
             });
             req.on('error', function (e) {
                 console.error('REQ error', e);
+                console.log(dataframe.b.y);
             });
-            console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>", dataframe)
-            console.log(">>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+            //console.log( dataframe)
+
             req.write(JSON.stringify(dataframe));
             req.end();
         board.samplesCount++;
-    });
+         //console.log("#################", cont, "#################");
+     });
+
+    setTimeout(function(){
     board.pinMode(3, board.MODES.ANALOG);
     board.analogRead(3, function(data){
         console.log("Reading analog:   ", data);
     });
+    }, 2000);
+    }, 1500);
+    board.on("errorTx", function(data){
+        console.log("errorTx");
+        console.log(data.errorCode);
+        console.log(data.errorT);
+    })
+
 });

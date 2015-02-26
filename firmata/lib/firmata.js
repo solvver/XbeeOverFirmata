@@ -92,6 +92,7 @@ START_SYSEX = 0xF0,
 STEPPER = 0x72,
 STRING_DATA = 0x71,
 INT_DATA = 0x74,
+ERROR_TX = 0x60,
 SYSTEM_RESET = 0xFF;
 
 /**
@@ -178,70 +179,24 @@ MIDI_RESPONSE[DIGITAL_MESSAGE] = function(board) {
 
 var SYSEX_RESPONSE = {};
 
+SYSEX_RESPONSE[ERROR_TX] = function(board) {
+    var errorCode = board.currentBuffer[2];
+    var timeError = new Date((0x7d0 | board.currentBuffer[3]), board.currentBuffer[4], board.currentBuffer[5], board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[7], 0);
+    board.emit("errorTx", {
+        errorCode: errorCode,
+        errorT: timeError
+    });
+}
 
-/*SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
-    console.log("")
-    console.log("")
-    console.log("")
-    console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
-    console.log("board.currentBuffer", board.currentBuffer.toString(16));
-    board.samplesCount = board.currentBuffer[2];
-    var numberPayloads=board.currentBuffer[3];
-    contPayloads = numberPayloads;
-    var pinesArray=[];
-    var valueArray=[];
-    var valueArrayIterator=0;
-    var timeSP = new Date((0x7d0 | board.currentBuffer[4]), board.currentBuffer[5], board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], board.currentBuffer[9], 0);
-    for (var i = 0; i < board.currentBuffer.length - 1;i++){
-        if((board.currentBuffer[i]& 0xF0)==0xE0){
-            numberChannels--;
-            //console.log("Una medida nalgalógica")
-            var value = board.currentBuffer[i+1] | (board.currentBuffer[i+2] << 7);
-            valueArray[valueArrayIterator]=value;
-            var pin = board.currentBuffer[i] & 0x0F;
-            if (board.pins[board.analogPins[pin]]) {
-                board.pins[board.analogPins[pin]].value = value;
-            }
-            board.emit("samples-packet-" + pin, value, timeSP);
-            board.emit("samples-packet", {
-                pin: pin,
-                value: value,
-                time: timeSP
-            });
-        }
-        if((board.currentBuffer[i]&0xF0)==0x90){
-            console.log("Una medida digital");
-            var port = Math.floor((board.currentBuffer[i] & 0x0F)/8);
-            //console.log("port", port);
-            //console.log("board.currentBuffer[i] & 0x0F", (board.currentBuffer[i] & 0x0F));
-            var portValue = board.currentBuffer[i+1] | (board.currentBuffer[i+2] << 7);
-            var pinNumber = 8 * port + (board.currentBuffer[i] & 0x0F);
-            //console.log("pinNumber", pinNumber)
-            var pin1 = board.pins[pinNumber];
-            //console.log("pin1.value", pin1.value)
-            if (pin1 && (pin1.mode === board.MODES.INPUT)) {
-                pin1.value = (portValue >> (i & 0x07)) & 0x01;
-                board.emit("samples-packet-" + pinNumber, pin1.value, timeSP);
-                board.emit("samples-packet", {
-                    pin: pinNumber,
-                    value: pin1.value,
-                    time: timeSP
-                });
-            }
-        }
-    }
-};*/
 
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
-    console.log("SAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKETSAMPLESPACKET")
-    console.log("board.currentBuffer", board.currentBuffer.toString(16));
     if (board.firstPayload==true || board.currentBuffer[4]==0){
         board.samplesCount = board.currentBuffer[2];
         board.numberChannels=board.currentBuffer[3];
         board.numPayloads=board.currentBuffer[4];
         var timeSP = new Date((0x7d0 | board.currentBuffer[5]), board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], board.currentBuffer[9], board.currentBuffer[10], 0);
         var pin=[];
-        var samples = new Array();
+        //var samples = new Array();
         var reading=false;
         var samplesRead=0;
         board.firstPayload=false;
@@ -252,18 +207,16 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     for(iterator; iterator<board.currentBuffer.length - 1;iterator++){
         if((board.currentBuffer[iterator]& 0xF0)==0xE0 || reading==true){
             if (reading==true){
-                value=board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
+                value= board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
                 iterator++;
-                //console.log("samplesReadValue", samplesRead);
                 samplesRead--;
-                //value=(value/1023)*5;
-                value=parseFloat((value / 1023) * 5).toFixed(3);
+                value=Number(parseFloat((value / 1023) * 5).toFixed(3));
                 samples.push(value);
             }
             if (reading==false) {
                 pin=board.currentBuffer[iterator] & 0x0F;
                 samplesRead=board.samplesCount;
-                //console.log("storing pin & samplesRead",samplesRead);
+                var samples=[];
                 board.numberChannels--;
                 reading=true;
             }
@@ -290,7 +243,6 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
  */
 
 SYSEX_RESPONSE[QUERY_FIRMWARE] = function(board) {
-  //console.log("3.-Response==>query firmware")
   var firmwareBuf = [];
   board.firmware.version = {};
   board.firmware.version.major = board.currentBuffer[2];
@@ -310,7 +262,6 @@ SYSEX_RESPONSE[QUERY_FIRMWARE] = function(board) {
 
 SYSEX_RESPONSE[CAPABILITY_RESPONSE] = function(board) {
   var supportedModes = 0;
-    //console.log("6.-Response==>Capability response")
     function pushModes(modesArray, mode) {
     if (supportedModes & (1 << board.MODES[mode])) {
       modesArray.push(board.MODES[mode]);
@@ -319,7 +270,6 @@ SYSEX_RESPONSE[CAPABILITY_RESPONSE] = function(board) {
   // Only create pins if none have been previously created on the instance.
   if (!board.pins.length) {
     for (var i = 2, n = 0; i < board.currentBuffer.length - 1; i++) {
-      //console.log("Bytes CapabilityResponse" ,board.currentBuffer[i])
       if (board.currentBuffer[i] === 127) {
         var modesArray = [];
         Object.keys(board.MODES).forEach(pushModes.bind(null, modesArray));
