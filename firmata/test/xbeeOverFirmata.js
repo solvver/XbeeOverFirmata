@@ -24,13 +24,13 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     setTimeout(function(){
     board.pinMode(3, board.MODES.ANALOG);
-    board.pinMode(5, board.MODES.ANALOG);
+  //  board.pinMode(5, board.MODES.ANALOG);
     board.analogRead(3, function(data){
         console.log("Reading analog:   ", data);
     });
-    board.analogRead(5, function(data){
+   /* board.analogRead(5, function(data){
         console.log("Reading analog:   ", data);
-    });
+    });*/
     }, 2000);
     /*setTimeout(function(){
         board.pinMode(5, board.MODES.ANALOG);

@@ -68,7 +68,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
                 if(res.statusCode != 200) {
                     console.log("statusCode != 200", res.statusCode);
                 }
-                console.log(res.read())
+                res.read();
                 res.on('data', function (d) {
                     console.log("##############data#################");
                     process.stdout.write(d);
