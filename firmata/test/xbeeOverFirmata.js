@@ -8,7 +8,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     console.log("Firmware: " + board.firmware.name + "-" + board.firmware.version.major + "." + board.firmware.version.minor);
 
-    board.reset();
+    //board.reset();
 
     setTimeout(function(){
 
