@@ -36,6 +36,7 @@ function buildSolvviewDataFrame() {
     }
     return dataframe;
 };
+var contReq=0;
 var dataframe;
 var board=new firmata.Board("/dev/ttyUSB0", function(err){
     if (err){
@@ -51,8 +52,8 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     board.setFirmataTime();
 
-    board.setDeliveryInterval(1000,  function(data){  //65535 reset to streaming mode
-        //console.log("#################", cont, "#################");
+    board.setDeliveryInterval(1000,  function(data){
+        contReq++;
         dataframe = buildSolvviewDataFrame();
         dataframe.b.m.ts = (data.TS);
          dataframe.t= new Date (data.TS);
@@ -62,29 +63,25 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
 
             var req = https.request(options, function (res) {
-                //console.log("++++++++++++++++++++++++", cont, "++++++++++++++++++++++++");
                 //console.log("statusCode: ", res.statusCode);
                 //console.log("headers: ", res.headers);
                 if(res.statusCode != 200) {
                     console.log("statusCode != 200", res.statusCode);
                 }
-                res.read();
-                res.on('data', function (d) {
-                    console.log("##############data#################");
-                    process.stdout.write(d);
-                });
-               // console.log("++++++++++++++++++++++++", cont++, "++++++++++++++++++++++++");
+
+
+
             });
+
             req.on('error', function (e) {
+                console.log("contReq:  ", contReq)
                 console.error('REQ error', e);
                 console.log(dataframe.b.y);
+                console.log(dataframe.t);
             });
-            //console.log( dataframe)
-
             req.write(JSON.stringify(dataframe));
             req.end();
-        board.samplesCount++;
-         //console.log("#################", cont, "#################");
+
      });
 
     setTimeout(function(){
