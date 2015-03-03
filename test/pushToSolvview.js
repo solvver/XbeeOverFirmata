@@ -2,19 +2,22 @@
  * Created by root on 17/02/15.
  */
 var firmata=require("../firmata");
-var https = require('https');
+var https = require('http');
 var url=require("url");
 var options = {
-    hostname: 'pre.solvview.com',
-    port: 443,
-    path: '/api/back/post/channels',
+   // hostname: 'pre.solvview.com',
+    hostname: '54.246.122.160',
+   // port: 443,
+   // path: '/api/back/post/channels',
+    port: 3000,
+    path: '/post/channels',
     method: 'POST',
     headers:{
         authentication:'{"uuid":"daq_ohlconcesiones_1","token":"RJ3FokddHWN7izYs"}'
     }
 };
 //options.hostname='nidays.solvview.com';
-options.hostname='pre.solvview.com';
+options.hostname='54.246.122.160';
 
 //options=url.parse("https://pre.solvview.com/api/back/post/channels");
 options.headers={
@@ -43,15 +46,11 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
         console.log("Init error");
         return;
     }
-
     console.log("Firmware: " + board.firmware.name + "-" + board.firmware.version.major + "." + board.firmware.version.minor);
     board.reset();
-
     setTimeout(function(){
     board.setSamplingInterval(100);
-
     board.setFirmataTime();
-
     board.setDeliveryInterval(1000,  function(data){
         contReq++;
         dataframe = buildSolvviewDataFrame();
@@ -60,10 +59,11 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
         for(var i=0;i<data.SC;i++) {
             dataframe.b.y[i] = data.samples[i];
         }
+        sendCloud(dataframe);
 
-
+/*
             var req = https.request(options, function (res) {
-                //console.log("statusCode: ", res.statusCode);
+                console.log("statusCode: ", res.statusCode, dataframe.t);
                 //console.log("headers: ", res.headers);
                 if(res.statusCode != 200) {
                     console.log("statusCode != 200", res.statusCode);
@@ -72,16 +72,19 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
 
             });
-
             req.on('error', function (e) {
                 console.log("contReq:  ", contReq)
                 console.error('REQ error', e);
                 console.log(dataframe.b.y);
                 console.log(dataframe.t);
             });
-            req.write(JSON.stringify(dataframe));
+console.log("Write dataframe", data.t)
+            req.write(JSON.stringify(dataframe),function(err,data){
+                console.log("request write", err, data);
+            });
+    //        console.log("rrequest===>", req)
             req.end();
-
+*/
      });
 
     setTimeout(function(){
@@ -98,3 +101,39 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
     })
 
 });
+
+function sendCloud(dataframe){
+
+    var tout;
+    var req = https.request(options, function (res) {
+
+      //  console.log("statusCode: ", res.statusCode, dataframe.t);
+        //console.log("headers: ", res.headers);
+        if(res.statusCode != 200) {
+            console.log("statusCode != 200", res.statusCode);
+        }
+        res.on("data",function(chunk){
+        });
+
+
+    });
+    req.setTimeout(10000,function(){
+        console.log("Timeout occurs to frame ", dataframe.t);
+    })
+    req.on('error', function (e) {
+        console.log("contReq:  ", contReq)
+        console.error('REQ error', e);
+        console.log(dataframe.b.y);
+        console.log(dataframe.t);
+    });
+    req.on("close",function(){
+      //  console.log("Connection closed", dataframe.t);
+    })
+
+    req.write(JSON.stringify(dataframe),function(){
+       // console.log("request write", dataframe.t);
+    });
+    req.end();
+
+
+}

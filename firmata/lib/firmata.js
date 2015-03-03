@@ -126,8 +126,6 @@ MIDI_RESPONSE[REPORT_VERSION] = function(board) {
 MIDI_RESPONSE[ANALOG_MESSAGE] = function(board) {
   var value = board.currentBuffer[1] | (board.currentBuffer[2] << 7);
   var pin = board.currentBuffer[0] & 0x0F;
-
-
   if (board.pins[board.analogPins[pin]]) {
     board.pins[board.analogPins[pin]].value = value;
   }
@@ -642,7 +640,6 @@ var Board = function(port, options, callback) {
                               self.currentBuffer.length = 0;
                           }
                       }
-
                       // There are 3 bytes in the buffer and the first is not START_SYSEX:
                       // Might have a MIDI Command
                       if (self.currentBuffer.length === 3 && self.currentBuffer[0] !== START_SYSEX) {
@@ -716,10 +713,10 @@ util.inherits(Board, Emitter);
 Board.prototype.reportVersion = function(callback) {
   newFrame.data=[];
   this.once("reportversion", callback);
-    console.log("2.-Emmit==>reportVersion prototype event")
+    console.log("2.-Emmit==>reportVersion prototype event");
     //newFrame.data = REPORT_VERSION;
     newFrame.data.push(REPORT_VERSION);
-    console.log("typeof",typeof(newFrame.data))
+    console.log("typeof",typeof(newFrame.data));
     //newFrame.data1 = 0;
     //newFrame.data2 = 0;
     //newFrame.data.push(REPORT_VERSION);
