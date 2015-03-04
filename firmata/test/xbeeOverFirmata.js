@@ -18,7 +18,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     board.setFirmataTime();
 
-    board.setDeliveryInterval(1000,  function(value) {  //65535 reset to streaming mode
+    board.setDeliveryInterval(4000,  function(value) {  //65535 reset to streaming mode
             console.log("samples-packet in front", value);
         });
 

@@ -188,6 +188,7 @@ SYSEX_RESPONSE[ERROR_TX] = function(board) {
 
 
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
+    console.log("samplepacketReceived!!!!=>", board.currentBuffer);
     if (board.firstPayload==true || board.currentBuffer[4]==0){
         board.samplesCount = board.currentBuffer[2];
         board.numberChannels=board.currentBuffer[3];
