@@ -188,42 +188,45 @@ SYSEX_RESPONSE[ERROR_TX] = function(board) {
 
 
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
-    //console.log("samplepacketReceived!!!!=>", board.currentBuffer);
+   // console.log("samplepacketReceived!!!!=>", board.currentBuffer);
     if (board.firstPayload==true || board.currentBuffer[4]==0){
         board.samplesCount = board.currentBuffer[2];
         board.numberChannels=board.currentBuffer[3];
         board.numPayloads=board.currentBuffer[4];
         var timeSP = new Date((0x7d0 | board.currentBuffer[5]), board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], board.currentBuffer[9], board.currentBuffer[10], 0);
         var pin=[];
+        var port;
+        var portValue;
         //var samples = new Array();
-        var reading=false;
-        var samplesRead=0;
+        board.reading=false;
+        board.samplesRead=0;
         board.firstPayload=false;
         var iterator=9;
     } else {
-        var iterator=0;
+        var iterator=2;
     }
     for(iterator; iterator<board.currentBuffer.length - 1;iterator++){
-        if((board.currentBuffer[iterator]& 0xF0)==0xE0 || reading==true){
-            if (reading==true){
+        if((board.currentBuffer[iterator]& 0xF0)==0xE0 || board.reading==true){
+            if (board.currentBuffer[iterator]==0xF0) iterator+=2;
+            if (board.reading==true){
                 value= board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
                 iterator++;
                 samplesRead--;
                 value=Number(parseFloat((value / 1023) * 5).toFixed(3));
                 samples.push(value);
             }
-            if (reading==false) {
+            if (board.reading==false) {
                 pin=board.currentBuffer[iterator] & 0x0F;
                 samplesRead=board.samplesCount;
                 var samples=[];
                 board.numberChannels--;
-                reading=true;
+                board.reading=true;
             }
             /*if (board.pins[board.analogPins[pin]]) {
                 board.pins[board.analogPins[pin]].value = value;
             }*/
             if (samplesRead==0) {
-                reading=false;
+                board.reading=false;
                 if (board.numberChannels==0) board.firstPayload=true;
                     board.emit("samples-packet", {
                     pin: pin,
@@ -233,6 +236,34 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
                      });
             }
         }
+       /* if((board.currentBuffer[iterator]& 0xF0)==0x90 || board.reading==true){
+            if (board.currentBuffer[iterator]==0x90) iterator+=2;
+            if (board.reading==true){
+                value= board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
+                iterator++;
+                samplesRead--;
+                value=Number(parseFloat((value / 1023) * 5).toFixed(3));
+                samples.push(value);
+            }
+            if (board.reading==false) {
+                port=Math.floor((board.currentBuffer[i] & 0x0F)/8);
+                pin=8 * port + (board.currentBuffer[i] & 0x0F);
+                samplesRead=board.samplesCount;
+                var samples=[];
+                board.numberChannels--;
+                board.reading=true;
+            }
+            if (samplesRead==0) {
+                board.reading=false;
+                if (board.numberChannels==0) board.firstPayload=true;
+                board.emit("samples-packet", {
+                    pin: pin,
+                    samples: samples,
+                    SC:board.samplesCount,
+                    TS: timeSP
+                });
+            }
+        }*/
     }
 }
 /**
@@ -548,7 +579,10 @@ var Board = function(port, options, callback) {
   this.samplesCount = 0;
   this.numPayloads;
   this.firstPayload=true;
-  this.numberChannels;
+  this.auxByte;
+  this.readyToReceiveNextPayload=false;
+  this.samplesRead=0;
+  this.reading;
 
   var cb=function(){
       cb.counter--;
@@ -698,10 +732,6 @@ var Board = function(port, options, callback) {
       }
     });
   });
-
-    /*this.on("waitingTxStatus", function(){
-
-    })*/
 };
 
 util.inherits(Board, Emitter);
@@ -1202,7 +1232,6 @@ Board.prototype.setDeliveryInterval = function(interval, callback) {   //OK if i
     }
     this.sp.write(xbeeAPI.buildFrame(newFrame));
     this.addListener("samples-packet", callback);
-    //this.addListener("samples-packet-" + pin, callback);
 };
 
 /**

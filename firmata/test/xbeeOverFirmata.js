@@ -8,29 +8,31 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     console.log("Firmware: " + board.firmware.name + "-" + board.firmware.version.major + "." + board.firmware.version.minor);
 
-    //board.reset();
+    board.reset();
 
     setTimeout(function(){
-
-
 
     board.setSamplingInterval(100);
 
     board.setFirmataTime();
 
-    board.setDeliveryInterval(4000,  function(value) {  //65535 reset to streaming mode
+    board.setDeliveryInterval(2000,  function(value) {  //65535 reset to streaming mode
             console.log("samples-packet in front", value);
         });
 
     setTimeout(function(){
     board.pinMode(3, board.MODES.ANALOG);
-  //  board.pinMode(5, board.MODES.ANALOG);
+    board.pinMode(5, board.MODES.ANALOG);
+    board.pinMode(6, board.MODES.ANALOG);
     board.analogRead(3, function(data){
         console.log("Reading analog:   ", data);
     });
-   /* board.analogRead(5, function(data){
+    board.analogRead(5, function(data){
         console.log("Reading analog:   ", data);
-    });*/
+    });
+        board.analogRead(6, function(data){
+            console.log("Reading analog:   ", data);
+        });
     }, 2000);
     /*setTimeout(function(){
         board.pinMode(5, board.MODES.ANALOG);

@@ -95,7 +95,7 @@ console.log("Write dataframe", data.t)
     }, 2000);
     }, 1500);
     board.on("errorTx", function(data){
-        console.log("errorTx");
+        console.log("ArduinoErrorTx");
         console.log(data.errorCode);
         console.log(data.errorT);
     })
