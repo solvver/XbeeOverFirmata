@@ -198,7 +198,8 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
         var port;
         var portValue;
         //var samples = new Array();
-        board.reading=false;
+        var readingAnalog=false;
+        var readingDigital=false;
         board.samplesRead=0;
         board.firstPayload=false;
         var iterator=9;
@@ -206,27 +207,27 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
         var iterator=2;
     }
     for(iterator; iterator<board.currentBuffer.length - 1;iterator++){
-        if((board.currentBuffer[iterator]& 0xF0)==0xE0 || board.reading==true){
+        if((board.currentBuffer[iterator]& 0xF0)==0xE0 || readingAnalog==true){
             if (board.currentBuffer[iterator]==0xF0) iterator+=2;
-            if (board.reading==true){
+            if (readingAnalog==true){
                 value= board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
                 iterator++;
                 samplesRead--;
                 value=Number(parseFloat((value / 1023) * 5).toFixed(3));
                 samples.push(value);
             }
-            if (board.reading==false) {
+            if (readingAnalog==false) {
                 pin=board.currentBuffer[iterator] & 0x0F;
                 samplesRead=board.samplesCount;
                 var samples=[];
                 board.numberChannels--;
-                board.reading=true;
+                readingAnalog=true;
             }
             /*if (board.pins[board.analogPins[pin]]) {
                 board.pins[board.analogPins[pin]].value = value;
             }*/
             if (samplesRead==0) {
-                board.reading=false;
+                readingAnalog=false;
                 if (board.numberChannels==0) board.firstPayload=true;
                     board.emit("samples-packet", {
                     pin: pin,
@@ -236,25 +237,25 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
                      });
             }
         }
-       /* if((board.currentBuffer[iterator]& 0xF0)==0x90 || board.reading==true){
+        if((board.currentBuffer[iterator]& 0xF0)==0x90 || readingDigital==true){
             if (board.currentBuffer[iterator]==0x90) iterator+=2;
-            if (board.reading==true){
+            if (readingDigital==true){
                 value= board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
                 iterator++;
                 samplesRead--;
                 value=Number(parseFloat((value / 1023) * 5).toFixed(3));
                 samples.push(value);
             }
-            if (board.reading==false) {
+            if (readingDigital==false) {
                 port=Math.floor((board.currentBuffer[i] & 0x0F)/8);
                 pin=8 * port + (board.currentBuffer[i] & 0x0F);
                 samplesRead=board.samplesCount;
                 var samples=[];
                 board.numberChannels--;
-                board.reading=true;
+                readingDigital=true;
             }
             if (samplesRead==0) {
-                board.reading=false;
+                readingDigital=false;
                 if (board.numberChannels==0) board.firstPayload=true;
                 board.emit("samples-packet", {
                     pin: pin,
@@ -263,7 +264,7 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
                     TS: timeSP
                 });
             }
-        }*/
+        }
     }
 }
 /**
@@ -291,12 +292,12 @@ SYSEX_RESPONSE[QUERY_FIRMWARE] = function(board) {
  */
 
 SYSEX_RESPONSE[CAPABILITY_RESPONSE] = function(board) {
-  var supportedModes = 0;
+    var supportedModes = 0;
     function pushModes(modesArray, mode) {
-    if (supportedModes & (1 << board.MODES[mode])) {
-      modesArray.push(board.MODES[mode]);
-    }
-  }
+      if (supportedModes & (1 << board.MODES[mode])) {
+         modesArray.push(board.MODES[mode]);
+        }
+      }
   // Only create pins if none have been previously created on the instance.
   if (!board.pins.length) {
     for (var i = 2, n = 0; i < board.currentBuffer.length - 1; i++) {
@@ -579,10 +580,6 @@ var Board = function(port, options, callback) {
   this.samplesCount = 0;
   this.numPayloads;
   this.firstPayload=true;
-  this.auxByte;
-  this.readyToReceiveNextPayload=false;
-  this.samplesRead=0;
-  this.reading;
 
   var cb=function(){
       cb.counter--;

@@ -5,8 +5,8 @@ var firmata=require("../firmata");
 var https = require('http');
 var url=require("url");
 var options = {
-   // hostname: 'pre.solvview.com',
-    hostname: '54.246.122.160',
+    hostname: 'pre.solvview.com',
+    //hostname: '54.246.122.160',
    // port: 443,
    // path: '/api/back/post/channels',
     port: 3000,
@@ -17,7 +17,7 @@ var options = {
     }
 };
 //options.hostname='nidays.solvview.com';
-options.hostname='54.246.122.160';
+options.hostname='pre.solvview.com';
 
 //options=url.parse("https://pre.solvview.com/api/back/post/channels");
 options.headers={
@@ -119,12 +119,14 @@ function sendCloud(dataframe){
     });
     req.setTimeout(10000,function(){
         console.log("Timeout occurs to frame ", dataframe.t);
+        req.write(JSON.stringify(dataframe));
     })
     req.on('error', function (e) {
         console.log("contReq:  ", contReq)
         console.error('REQ error', e);
         console.log(dataframe.b.y);
         console.log(dataframe.t);
+        req.write(JSON.stringify(dataframe));
     });
     req.on("close",function(){
       //  console.log("Connection closed", dataframe.t);
