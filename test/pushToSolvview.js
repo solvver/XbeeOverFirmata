@@ -103,9 +103,7 @@ console.log("Write dataframe", data.t)
 });
 
 function sendCloud(dataframe){
-
-    var tout;
-    var req = https.request(options, function (res) {
+        var req = https.request(options, function (res) {
 
       //  console.log("statusCode: ", res.statusCode, dataframe.t);
         //console.log("headers: ", res.headers);
