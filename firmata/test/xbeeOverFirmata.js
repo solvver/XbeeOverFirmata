@@ -8,111 +8,86 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
     console.log("Firmware: " + board.firmware.name + "-" + board.firmware.version.major + "." + board.firmware.version.minor);
 
-    board.reset();
+  //  board.reset();
 
     setTimeout(function(){
 
-    board.setSamplingInterval(100);
+    board.setSamplingInterval(500);
 
     board.setFirmataTime();
 
-    board.setDeliveryInterval(2000,  function(value) {  //65535 reset to streaming mode
+    board.setDeliveryInterval(1000,  function(value) {  //65535 reset to streaming mode
             console.log("samples-packet in front", value);
         });
 
     setTimeout(function(){
-    board.pinMode(3, board.MODES.ANALOG);
-    board.pinMode(5, board.MODES.ANALOG);
-    board.pinMode(6, board.MODES.ANALOG);
+  //  board.pinMode(42, board.MODES.INPUT);
+        board.pinMode(3, board.MODES.INPUT);
+        board.pinMode(2, board.MODES.INPUT);
+        board.pinMode(21, board.MODES.INPUT);
+        board.pinMode(32, board.MODES.INPUT);
+   // board.pinMode(5, board.MODES.ANALOG);
+          board.pinMode(6, board.MODES.ANALOG);
+    board.pinMode(7, board.MODES.ANALOG);
+    board.pinMode(8, board.MODES.ANALOG);
+    board.pinMode(9, board.MODES.ANALOG);
+         board.pinMode(10, board.MODES.ANALOG);
+    board.pinMode(11, board.MODES.ANALOG);
+    board.pinMode(12, board.MODES.ANALOG);
+   /* board.pinMode(13, board.MODES.ANALOG);
+    board.pinMode(14, board.MODES.ANALOG);
     board.analogRead(3, function(data){
         console.log("Reading analog:   ", data);
     });
     board.analogRead(5, function(data){
         console.log("Reading analog:   ", data);
+    });*/
+    board.analogRead(6, function(data){
+        console.log("Reading analog:   ", data);
     });
-        board.analogRead(6, function(data){
-            console.log("Reading analog:   ", data);
+    board.analogRead(7, function(data){
+        console.log("Reading analog:   ", data);
+    });
+    board.analogRead(8, function(data){
+        console.log("Reading analog:   ", data);
+    });
+    board.analogRead(9, function(data){
+        console.log("Reading analog:   ", data);
+    });
+         board.analogRead(10, function(data){
+        console.log("Reading analog:   ", data);
+    });
+    board.analogRead(11, function(data){
+        console.log("Reading analog:   ", data);
+    });
+    board.analogRead(12, function(data){
+        console.log("Reading analog:   ", data);
+    });
+  /*  board.analogRead(13, function(data){
+        console.log("Reading analog:   ", data);
+    });*/
+  //  board.digitalRead(42, function(data){
+        //      console.log("Reading digital:   ", data);
+//    });
+        board.digitalRead(3, function(data){
+            console.log("Reading digital:   ", data);
+        });
+        board.digitalRead(2, function(data){
+            console.log("Reading digital:   ", data);
+        });
+        board.digitalRead(21, function(data){
+            console.log("Reading digital:   ", data);
+        });
+        board.digitalRead(32, function(data){
+            console.log("Reading digital:   ", data);
         });
     }, 2000);
 
-    /*setTimeout(function(){
-        board.pinMode(5, board.MODES.ANALOG);
-    }, 1200);
-    setTimeout(function(){
-        board.pinMode(4, board.MODES.ANALOG);
-    }, 1300);*/
 
-    /*setTimeout(function(){
-        board.pinMode(6, board.MODES.INPUT);
-    }, 1400);*/
 
 
     }, 1500);
-   /* setTimeout(function(){
-        board.analogRead(5, function(data){
-            console.log("Reading analog:   ", data);
-        });
-    },1600);
 
-    setTimeout(function(){
-        board.analogRead(4, function(data){
-            console.log("Reading analog:   ", data);
-        });
-    },1700);*/
-
-    /*setTimeout(function(){
-        board.digitalRead(6, function(data){
-            console.log("Reading analog:   ", data);
-        });
-    },1800);*/
-
-
-
-
-  /*
-   setTimeout(function(){
-  board.pinMode(5, board.MODES.ANALOG);
-   }, 500);
-   setTimeout(function(){
-   board.pinMode(6, board.MODES.ANALOG);
-   },700);
-    setTimeout(function(){
-        board.analogRead(5, function(data){
-            console.log("Reading analog:   ", data);
-        });
-   },1100);
-    setTimeout(function(){
-        board.analogRead(6, function(data){
-            console.log("Reading analog:   ", data);
-        });
-    },1300);
-
-    setTimeout(function(){
-    board.pinMode(3, board.MODES.INPUT);
-    },1500);
-
-    setTimeout(function(){
-        board.pinMode(4, board.MODES.INPUT);
-    },1700);
-    setTimeout(function(){
-        board.pinMode(5, board.MODES.INPUT);
-    },1900);
-    setTimeout(function(){
-        board.digitalRead(3, function(data){
-            console.log("digital read in front: ", data);
-        })
-    },2100);
-    setTimeout(function(){
-        board.digitalRead(4, function(data){
-            console.log("digital read in front: ", data);
-        })
-    },2300);
-
-    setTimeout(function(){
-        board.digitalRead(5, function(data){
-            console.log("digital read in front: ", data);
-        })
-    },2500);*/
 
     board.on("string", function(string){
         console.log(string)

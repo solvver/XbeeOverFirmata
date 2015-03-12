@@ -151,16 +151,17 @@ MIDI_RESPONSE[ANALOG_MESSAGE] = function(board) {
  */
 
 MIDI_RESPONSE[DIGITAL_MESSAGE] = function(board) {
-    console.log("01010101DigitalMsg");
+    console.log("01010101DigitalMsg", board.currentBuffer);
   var port = (board.currentBuffer[0] & 0x0F);
   var portValue = board.currentBuffer[1] | (board.currentBuffer[2] << 7);
-
+    //var portValue = board.currentBuffer[1] ;
   for (var i = 0; i < 8; i++) {
     var pinNumber = 8 * port + i;
     var pin = board.pins[pinNumber];
     if (pin && (pin.mode === board.MODES.INPUT)) {
+        console.log("emmit the event");
       pin.value = (portValue >> (i & 0x07)) & 0x01;
-      board.emit("digital-read-" + pinNumber, pin.value);
+     // board.emit("digital-read-" + pinNumber, pin.value);
       board.emit("digital-read", {
         pin: pinNumber,
         value: pin.value
@@ -188,7 +189,7 @@ SYSEX_RESPONSE[ERROR_TX] = function(board) {
 
 
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
-   // console.log("samplepacketReceived!!!!=>", board.currentBuffer);
+    console.log("samplesPcketReceived:  ", board.currentBuffer)
     if (board.firstPayload==true || board.currentBuffer[4]==0){
         board.samplesCount = board.currentBuffer[2];
         board.numberChannels=board.currentBuffer[3];
@@ -196,19 +197,52 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
         var timeSP = new Date((0x7d0 | board.currentBuffer[5]), board.currentBuffer[6], board.currentBuffer[7], board.currentBuffer[8], board.currentBuffer[9], board.currentBuffer[10], 0);
         var pin=[];
         var port;
-        var portValue;
-        //var samples = new Array();
+        var value;
+
+        var numDigitalsChannels=0;
+        var arrayDigitalPorts=[];
+        var contDigitalPorts=0;
+        var firstDigitalPort=0;
+        var portAlreadyStored=false;
+
         var readingAnalog=false;
         var readingDigital=false;
         board.samplesRead=0;
         board.firstPayload=false;
         var iterator=9;
+        var iterator1=9;
     } else {
         var iterator=2;
+        var iterator1=2;
     }
+    for(iterator1; iterator1<board.currentBuffer.length - 1;iterator1++){
+        if((board.currentBuffer[iterator1] & 0xF0)===0x90) {
+            console.log("0101010101");
+           // numDigitalPorts[contDigitalPorts++]++;
+            numDigitalsChannels++;
+            if (firstDigitalPort==0){
+                firstDigitalPort=1;
+                arrayDigitalPorts[contDigitalPorts++]=(board.currentBuffer[iterator1] & 0xF0);
+            } else {
+                for(var f=0;f<contDigitalPorts;f++){
+                   console.log("searchingPorts");
+                   portAlreadyStored=false;
+                   if(arrayDigitalPorts[f]==(board.currentBuffer[iterator1] & 0xF0)){
+                       portAlreadyStored=true;
+                      //arrayDigitalPorts[ contDigitalPorts++]=(board.currentBuffer[iterator1] & 0xF0);
+                   }
+                   if (portAlreadyStored==false) {
+                       arrayDigitalPorts[contDigitalPorts++]=(board.currentBuffer[iterator1] & 0xF0);
+                       console.log("detectedOneDigitalPort") ;
+                   }
+                }
+            }
+        }
+    }
+    console.log("contDigitalPorts", contDigitalPorts);
     for(iterator; iterator<board.currentBuffer.length - 1;iterator++){
-        if((board.currentBuffer[iterator]& 0xF0)==0xE0 || readingAnalog==true){
-            if (board.currentBuffer[iterator]==0xF0) iterator+=2;
+        if((board.currentBuffer[iterator] & 0xF0)===0xE0 || readingAnalog==true){
+            //console.log("parsing analog ~~~", readingAnalog);
             if (readingAnalog==true){
                 value= board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
                 iterator++;
@@ -228,6 +262,7 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
             }*/
             if (samplesRead==0) {
                 readingAnalog=false;
+                //console.log("readingAnalogValue", readingAnalog);
                 if (board.numberChannels==0) board.firstPayload=true;
                     board.emit("samples-packet", {
                     pin: pin,
@@ -237,33 +272,83 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
                      });
             }
         }
-        if((board.currentBuffer[iterator]& 0xF0)==0x90 || readingDigital==true){
-            if (board.currentBuffer[iterator]==0x90) iterator+=2;
-            if (readingDigital==true){
-                value= board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
+        if((board.currentBuffer[iterator] & 0xF0)===0x90 || readingDigital==true){
+            //console.log("parsing digital 01101", readingDigital);
+          /*  if (readingDigital==true) {
+                console.log("readingDigital==true");
+                portValue = board.currentBuffer[iterator] | (board.currentBuffer[iterator + 1] << 7)
                 iterator++;
                 samplesRead--;
-                value=Number(parseFloat((value / 1023) * 5).toFixed(3));
-                samples.push(value);
+                for (var i = 0; i < 8; i++) {
+                    var pinNumber = 8 * port + i;
+                    pin = board.pins[pinNumber];
+                    if (pin && (pin.mode === board.MODES.INPUT)) {
+                    //    if (readingDigital == true) {
+                            console.log("push one digital value");
+                            value = (portValue >> (i & 0x07)) & 0x01;
+                            samples.push(value);
+                    //    }
+                        if (samplesRead == 0) {
+                            readingDigital = false;
+                            //console.log("readingDigitalValue", readingDigital);
+                            if (board.numberChannels == 0) board.firstPayload = true;
+                            board.emit("samples-packet", {
+                                pin: pinNumber,
+                                samples: samples,
+                                SC: board.samplesCount,
+                                TS: timeSP
+                            });
+                        }
+                    }
+                }
+            }*/
+            if (readingDigital==true) {
+                console.log("readingDigital==true");
+                //portValue = board.currentBuffer[iterator] | (board.currentBuffer[iterator + 1] << 7)
+               // iterator++;
+               // samplesRead--;
+                for (var i = 0; i < 8; i++) {
+                    var pinNumber = 8 * port + i;
+                    pin = board.pins[pinNumber];
+                    if (pin && (pin.mode === board.MODES.INPUT)) {
+                        var auxIterator=iterator;
+                        numDigitalsChannels--;
+                        console.log("detectedOneDigitalchannel")
+                        for (var k = (samplesRead-1); k >= 0; k--) {
+                            console.log("push one digital value");
+                            portValue = board.currentBuffer[auxIterator++] | (board.currentBuffer[auxIterator++] << 7)
+                            value = (portValue >> (i & 0x07)) & 0x01;
+                            samples.push(value);
+                            if (k == 0) {
+                                readingDigital = false;
+                                //console.log("readingDigitalValue", readingDigital);
+                                if (board.numberChannels == 0) board.firstPayload = true;
+                                board.emit("samples-packet", {
+                                    pin: pinNumber,
+                                    samples: samples,
+                                    SC: board.samplesCount,
+                                    TS: timeSP
+                                });
+                                samples=[];
+                            }
+                        }
+
+                    }
+                }
+                iterator=auxIterator;
             }
-            if (readingDigital==false) {
-                port=Math.floor((board.currentBuffer[i] & 0x0F)/8);
-                pin=8 * port + (board.currentBuffer[i] & 0x0F);
+            if (readingDigital==false && contDigitalPorts>=0) {
+                console.log("firstDigitalSample");
+                port=(board.currentBuffer[iterator] & 0x0F);
+                //pin=8 * port + (board.currentBuffer[i] & 0x0F);
                 samplesRead=board.samplesCount;
                 var samples=[];
+                var portValue=0;
                 board.numberChannels--;
+                contDigitalPorts--;
                 readingDigital=true;
             }
-            if (samplesRead==0) {
-                readingDigital=false;
-                if (board.numberChannels==0) board.firstPayload=true;
-                board.emit("samples-packet", {
-                    pin: pin,
-                    samples: samples,
-                    SC:board.samplesCount,
-                    TS: timeSP
-                });
-            }
+            //if (samplesRead==0) readingDigital = false;
         }
     }
 }
@@ -923,7 +1008,8 @@ Board.prototype.digitalWrite = function(pin, value) {
 Board.prototype.digitalRead = function(pin, callback) {
   newFrame.data=[];
   this.reportDigitalPin(pin, 1);
-  this.addListener("digital-read-" + pin, callback);
+  //this.addListener("digital-read-" + pin, callback);
+    this.addListener("digital-read", callback);
 };
 
 /**
@@ -1241,10 +1327,8 @@ Board.prototype.reportAnalogPin = function(pin, value) {
   newFrame.data=[];
   if (value === 0 || value === 1) {
     this.pins[this.analogPins[pin]].report = value;
-    //newFrame.data=REPORT_ANALOG<<16 | pin<<8 | value;
     newFrame.data.unshift(REPORT_ANALOG, pin, value);
     this.sp.write(xbeeAPI.buildFrame(newFrame));
-   // this.sp.write(new Buffer([REPORT_ANALOG | pin, value]));
   }
 };
 
@@ -1259,9 +1343,9 @@ Board.prototype.reportDigitalPin = function(pin, value) {
   var port = Math.floor(pin / 8);
   console.log("reportDigitalPin  port:");
   console.log(port);
+  console.log(value);
   if (value === 0 || value === 1) {
-    this.pins[pin].report = value;
-    //newFrame.data=(REPORT_DIGITAL | port)<<8 | value;
+  this.pins[pin].report = value;
   newFrame.data.unshift(REPORT_DIGITAL, port, value);
   this.sp.write(xbeeAPI.buildFrame(newFrame));
   }

@@ -60,31 +60,6 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
             dataframe.b.y[i] = data.samples[i];
         }
         sendCloud(dataframe);
-
-/*
-            var req = https.request(options, function (res) {
-                console.log("statusCode: ", res.statusCode, dataframe.t);
-                //console.log("headers: ", res.headers);
-                if(res.statusCode != 200) {
-                    console.log("statusCode != 200", res.statusCode);
-                }
-
-
-
-            });
-            req.on('error', function (e) {
-                console.log("contReq:  ", contReq)
-                console.error('REQ error', e);
-                console.log(dataframe.b.y);
-                console.log(dataframe.t);
-            });
-console.log("Write dataframe", data.t)
-            req.write(JSON.stringify(dataframe),function(err,data){
-                console.log("request write", err, data);
-            });
-    //        console.log("rrequest===>", req)
-            req.end();
-*/
      });
 
     setTimeout(function(){
@@ -94,6 +69,7 @@ console.log("Write dataframe", data.t)
     });
     }, 2000);
     }, 1500);
+
     board.on("errorTx", function(data){
         console.log("ArduinoErrorTx");
         console.log(data.errorCode);
