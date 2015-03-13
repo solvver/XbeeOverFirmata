@@ -189,7 +189,7 @@ SYSEX_RESPONSE[ERROR_TX] = function(board) {
 
 
 SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
-    console.log("samplesPcketReceived:  ", board.currentBuffer)
+    //console.log("samplesPcketReceived:  ", board.currentBuffer)
     if (board.firstPayload==true || board.currentBuffer[4]==0){
         board.samplesCount = board.currentBuffer[2];
         board.numberChannels=board.currentBuffer[3];
@@ -199,49 +199,51 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
         var port;
         var value;
 
-        var numDigitalsChannels=0;
-        var arrayDigitalPorts=[];
-        var contDigitalPorts=0;
-        var firstDigitalPort=0;
-        var portAlreadyStored=false;
+       // var numDigitalsChannels=0;
+       // var arrayDigitalPorts=[];
+       // var contDigitalPorts=0;
+       // var contChannelsPerPort=[];
+       // var firstDigitalPort=0;
+       // var portAlreadyStored=false;
+       // var nextPort=true;
 
         var readingAnalog=false;
         var readingDigital=false;
         board.samplesRead=0;
         board.firstPayload=false;
         var iterator=9;
-        var iterator1=9;
+      //  var iterator1=9;
     } else {
         var iterator=2;
-        var iterator1=2;
+    //    var iterator1=2;
     }
-    for(iterator1; iterator1<board.currentBuffer.length - 1;iterator1++){
+  /*  for(iterator1; iterator1<board.currentBuffer.length - 1;iterator1++){
         if((board.currentBuffer[iterator1] & 0xF0)===0x90) {
-            console.log("0101010101");
-           // numDigitalPorts[contDigitalPorts++]++;
             numDigitalsChannels++;
             if (firstDigitalPort==0){
                 firstDigitalPort=1;
-                arrayDigitalPorts[contDigitalPorts++]=(board.currentBuffer[iterator1] & 0xF0);
+                arrayDigitalPorts[contDigitalPorts++]=(board.currentBuffer[iterator1] & 0x0F);
+                contChannelsPerPort[board.currentBuffer[iterator1] & 0x0F]=1;
             } else {
                 for(var f=0;f<contDigitalPorts;f++){
-                   console.log("searchingPorts");
                    portAlreadyStored=false;
-                   if(arrayDigitalPorts[f]==(board.currentBuffer[iterator1] & 0xF0)){
+                   if(arrayDigitalPorts[f]==(board.currentBuffer[iterator1] & 0x0F)){
+                       contChannelsPerPort[board.currentBuffer[iterator1] & 0x0F]++;
                        portAlreadyStored=true;
-                      //arrayDigitalPorts[ contDigitalPorts++]=(board.currentBuffer[iterator1] & 0xF0);
                    }
                    if (portAlreadyStored==false) {
-                       arrayDigitalPorts[contDigitalPorts++]=(board.currentBuffer[iterator1] & 0xF0);
-                       console.log("detectedOneDigitalPort") ;
+                       arrayDigitalPorts[contDigitalPorts++]=(board.currentBuffer[iterator1] & 0x0F);
+                       contChannelsPerPort[board.currentBuffer[iterator1] & 0x0F]=1;
                    }
                 }
             }
         }
     }
-    console.log("contDigitalPorts", contDigitalPorts);
+    console.log("contDigitalPorts", contDigitalPorts);*/
     for(iterator; iterator<board.currentBuffer.length - 1;iterator++){
+        console.log("iteratorSample", board.currentBuffer[iterator])
         if((board.currentBuffer[iterator] & 0xF0)===0xE0 || readingAnalog==true){
+            if (board.currentBuffer[iterator]==0xF0) iterator+=2;
             //console.log("parsing analog ~~~", readingAnalog);
             if (readingAnalog==true){
                 value= board.currentBuffer[iterator] | (board.currentBuffer[iterator+1] << 7)
@@ -273,6 +275,11 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
             }
         }
         if((board.currentBuffer[iterator] & 0xF0)===0x90 || readingDigital==true){
+            if (board.currentBuffer[iterator]==0xF0) {
+                console.log("&&&&&jump!!!")
+                iterator+=2;
+            }
+          //  nextPort=true;
             //console.log("parsing digital 01101", readingDigital);
           /*  if (readingDigital==true) {
                 console.log("readingDigital==true");
@@ -302,7 +309,18 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
                     }
                 }
             }*/
-            if (readingDigital==true) {
+            if (readingDigital==false/* && contDigitalPorts>=0 && nextPort==true*/) {
+                console.log("firstDigitalSample");
+                port = (board.currentBuffer[iterator] & 0x0F);
+                //pin=8 * port + (board.currentBuffer[i] & 0x0F);
+                samplesRead = board.samplesCount;
+                var samples = [];
+                var portValue = 0;
+                board.numberChannels--;
+               // contDigitalPorts--;
+                readingDigital = true;
+             //   nextport=false;
+            } else  {
                 console.log("readingDigital==true");
                 //portValue = board.currentBuffer[iterator] | (board.currentBuffer[iterator + 1] << 7)
                // iterator++;
@@ -311,15 +329,19 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
                     var pinNumber = 8 * port + i;
                     pin = board.pins[pinNumber];
                     if (pin && (pin.mode === board.MODES.INPUT)) {
-                        var auxIterator=iterator;
-                        numDigitalsChannels--;
-                        console.log("detectedOneDigitalchannel")
-                        for (var k = (samplesRead-1); k >= 0; k--) {
+                       // var auxIterator=iterator;
+                        samplesRead--;
+                       // contChannelsPerPort[port]--;
+                       // if (contChannelsPerPort[port]==0) nextPort=false;
+                       // numDigitalsChannels--;
+                        //console.log("detectedOneDigitalchannel")
+                       // for (var k = (samplesRead-1); k >= 0; k--) {
                             console.log("push one digital value");
-                            portValue = board.currentBuffer[auxIterator++] | (board.currentBuffer[auxIterator++] << 7)
+                        //    portValue = board.currentBuffer[auxIterator++] | (board.currentBuffer[auxIterator++] << 7)
+                        portValue = board.currentBuffer[iterator++] | (board.currentBuffer[iterator++] << 7)
                             value = (portValue >> (i & 0x07)) & 0x01;
                             samples.push(value);
-                            if (k == 0) {
+                            if (samplesRead== 0) {
                                 readingDigital = false;
                                 //console.log("readingDigitalValue", readingDigital);
                                 if (board.numberChannels == 0) board.firstPayload = true;
@@ -331,23 +353,13 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
                                 });
                                 samples=[];
                             }
-                        }
+                      //  }
 
                     }
                 }
-                iterator=auxIterator;
+                //iterator=auxIterator;
             }
-            if (readingDigital==false && contDigitalPorts>=0) {
-                console.log("firstDigitalSample");
-                port=(board.currentBuffer[iterator] & 0x0F);
-                //pin=8 * port + (board.currentBuffer[i] & 0x0F);
-                samplesRead=board.samplesCount;
-                var samples=[];
-                var portValue=0;
-                board.numberChannels--;
-                contDigitalPorts--;
-                readingDigital=true;
-            }
+
             //if (samplesRead==0) readingDigital = false;
         }
     }

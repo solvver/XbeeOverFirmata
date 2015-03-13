@@ -49,9 +49,9 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
     console.log("Firmware: " + board.firmware.name + "-" + board.firmware.version.major + "." + board.firmware.version.minor);
     board.reset();
     setTimeout(function(){
-    board.setSamplingInterval(100);
+    board.setSamplingInterval(500);
     board.setFirmataTime();
-    board.setDeliveryInterval(1000,  function(data){
+    board.setDeliveryInterval(2000,  function(data){
         contReq++;
         dataframe = buildSolvviewDataFrame();
         dataframe.b.m.ts = (data.TS);
