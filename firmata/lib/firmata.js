@@ -198,7 +198,10 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
         var pin=[];
         var port;
         var value;
-
+        var digitalPinsRead=[];
+        for (var i=0; i<71; i++){
+                digitalPinsRead[i]=0;
+        }
        // var numDigitalsChannels=0;
        // var arrayDigitalPorts=[];
        // var contDigitalPorts=0;
@@ -206,7 +209,6 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
        // var firstDigitalPort=0;
        // var portAlreadyStored=false;
        // var nextPort=true;
-
         var readingAnalog=false;
         var readingDigital=false;
         board.samplesRead=0;
@@ -241,7 +243,7 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
     }
     console.log("contDigitalPorts", contDigitalPorts);*/
     for(iterator; iterator<board.currentBuffer.length - 1;iterator++){
-        console.log("iteratorSample", board.currentBuffer[iterator])
+       // console.log("iteratorSample", board.currentBuffer[iterator])
         if((board.currentBuffer[iterator] & 0xF0)===0xE0 || readingAnalog==true){
             if (board.currentBuffer[iterator]==0xF0) iterator+=2;
             //console.log("parsing analog ~~~", readingAnalog);
@@ -329,37 +331,40 @@ SYSEX_RESPONSE[SAMPLES_PACKET] = function(board) {
                     var pinNumber = 8 * port + i;
                     pin = board.pins[pinNumber];
                     if (pin && (pin.mode === board.MODES.INPUT)) {
-                       // var auxIterator=iterator;
-                        samplesRead--;
-                       // contChannelsPerPort[port]--;
-                       // if (contChannelsPerPort[port]==0) nextPort=false;
-                       // numDigitalsChannels--;
-                        //console.log("detectedOneDigitalchannel")
-                       // for (var k = (samplesRead-1); k >= 0; k--) {
-                            console.log("push one digital value");
-                        //    portValue = board.currentBuffer[auxIterator++] | (board.currentBuffer[auxIterator++] << 7)
-                        portValue = board.currentBuffer[iterator++] | (board.currentBuffer[iterator++] << 7)
-                            value = (portValue >> (i & 0x07)) & 0x01;
-                            samples.push(value);
-                            if (samplesRead== 0) {
-                                readingDigital = false;
-                                //console.log("readingDigitalValue", readingDigital);
-                                if (board.numberChannels == 0) board.firstPayload = true;
-                                board.emit("samples-packet", {
-                                    pin: pinNumber,
-                                    samples: samples,
-                                    SC: board.samplesCount,
-                                    TS: timeSP
-                                });
-                                samples=[];
-                            }
-                      //  }
-
+                       if (digitalPinsRead[pinNumber]==1) {
+                           console.log("pin already read");
+                       } else {
+                           digitalPinsRead[pinNumber]= 1;
+                           var auxIterator = iterator;
+                           samplesRead--;
+                           // contChannelsPerPort[port]--;
+                           // if (contChannelsPerPort[port]==0) nextPort=false;
+                           // numDigitalsChannels--;
+                           //console.log("detectedOneDigitalchannel")
+                           for (var k = (samplesRead - 1); k >= 0; k--) {
+                               console.log("push one digital value");
+                               portValue = board.currentBuffer[auxIterator++] | (board.currentBuffer[auxIterator++] << 7)
+                               //portValue = board.currentBuffer[iterator++] | (board.currentBuffer[iterator++] << 7)
+                               value = (portValue >> (i & 0x07)) & 0x01;
+                               samples.push(value);
+                               if (k == 0) {
+                                   readingDigital = false;
+                                   //console.log("readingDigitalValue", readingDigital);
+                                   if (board.numberChannels == 0) board.firstPayload = true;
+                                   board.emit("samples-packet", {
+                                       pin: pinNumber,
+                                       samples: samples,
+                                       SC: board.samplesCount,
+                                       TS: timeSP
+                                   });
+                                   samples = [];
+                               }
+                           }
+                       }
                     }
                 }
-                //iterator=auxIterator;
+                iterator=auxIterator;
             }
-
             //if (samplesRead==0) readingDigital = false;
         }
     }

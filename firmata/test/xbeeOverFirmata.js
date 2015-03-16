@@ -21,7 +21,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
         });
 
     setTimeout(function(){
-  //  board.pinMode(42, board.MODES.INPUT);
+        board.pinMode(2, board.MODES.INPUT);
         board.pinMode(3, board.MODES.INPUT);
         board.pinMode(42, board.MODES.INPUT);
         board.pinMode(21, board.MODES.INPUT);
@@ -94,9 +94,9 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
   /*  board.analogRead(13, function(data){
         console.log("Reading analog:   ", data);
     });*/
-  //  board.digitalRead(42, function(data){
-        //      console.log("Reading digital:   ", data);
-//    });
+    board.digitalRead(2, function(data){
+              console.log("Reading digital:   ", data);
+    });
         board.digitalRead(3, function(data){
             console.log("Reading digital:   ", data);
         });
