@@ -94,6 +94,7 @@ STRING_DATA = 0x71,
 INT_DATA = 0x74,
 ERROR_TX = 0x60,
 SYSTEM_RESET = 0xFF;
+START = 0X81;
 
 /**
  * MIDI_RESPONSE contains functions to be called when we receive a MIDI message from the arduino.
@@ -151,7 +152,6 @@ MIDI_RESPONSE[ANALOG_MESSAGE] = function(board) {
  */
 
 MIDI_RESPONSE[DIGITAL_MESSAGE] = function(board) {
-    console.log("01010101DigitalMsg", board.currentBuffer);
   var port = (board.currentBuffer[0] & 0x0F);
   var portValue = board.currentBuffer[1] | (board.currentBuffer[2] << 7);
     //var portValue = board.currentBuffer[1] ;
@@ -159,7 +159,6 @@ MIDI_RESPONSE[DIGITAL_MESSAGE] = function(board) {
     var pinNumber = 8 * port + i;
     var pin = board.pins[pinNumber];
     if (pin && (pin.mode === board.MODES.INPUT)) {
-        console.log("emmit the event");
       pin.value = (portValue >> (i & 0x07)) & 0x01;
      // board.emit("digital-read-" + pinNumber, pin.value);
       board.emit("digital-read", {
@@ -683,16 +682,22 @@ var Board = function(port, options, callback) {
   this.numPayloads;
   this.firstPayload=true;
 
-  var cb=function(){
+  var cb=function() {
       cb.counter--;
-      if(cb.counter ==0){
+      if (cb.counter == 0) {
           console.log("Executing report version")
-          board.reportVersion(function () {
-              board.queryFirmware(function () {
-              });
-          });
+          board.reset();
+            setTimeout(function(){
+                board.reportVersion(function () {
+                    board.queryFirmware(function () {
+                    });
+                });
+      }, 1000)
+
+
       }
   }
+
     cb.counter=1;
 
 
@@ -1482,6 +1487,12 @@ Board.prototype.stepperStep = function(deviceNum, direction, steps, speed, accel
 /**
  * Send SYSTEM_RESET to arduino
  */
+Board.prototype.start = function() {
+    newFrame.data=[];
+    //newFrame.data=SYSTEM_RESET;
+    newFrame.data.unshift(START_SYSEX, START, END_SYSEX);
+    this.sp.write(new Buffer(xbeeAPI.buildFrame(newFrame)));
+};
 
 Board.prototype.reset = function() {
     newFrame.data=[];

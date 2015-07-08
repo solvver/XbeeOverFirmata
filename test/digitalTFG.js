@@ -7,8 +7,8 @@ var url=require("url");
 var options = {
     hostname: 'demo.solvview.com',
     //hostname: '54.246.122.160',
-   // port: 443,
-   // path: '/api/back/post/channels',
+    // port: 443,
+    // path: '/api/back/post/channels',
     port: 3000,
     path: '/post/channels',
     method: 'POST',
@@ -50,47 +50,23 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 
 
     setTimeout(function(){
-    board.setSamplingInterval(100);
-    board.setFirmataTime();
-    board.setDeliveryInterval(1000,  function(data){
-        console.log(data);
-        contReq++;
-        dataframe = buildSolvviewDataFrame();
-        dataframe.b.m.ts = (data.TS);
-         dataframe.t= new Date (data.TS);
-        for(var i=0;i<data.SC;i++) {
-            dataframe.b.y[i] = data.samples[i];
-        }
-        sendCloud(dataframe);
-     });
-    }, 1000);
+        board.setSamplingInterval(100);
+        board.setFirmataTime();
 
-    setTimeout(function(){
-    board.pinMode(3, board.MODES.ANALOG);
-    board.analogRead(3, function(data){
-        console.log("Reading analog:   ", data);
-    });
-        board.pinMode(0, board.MODES.ANALOG);
-        board.analogRead(0, function(data){
-            console.log("Reading analog:   ", data);
-        });
     }, 2000);
 
     setTimeout(function(){
+        board.pinMode(26, board.MODES.INPUT);
+        board.digitalRead(26, function(data){
+            console.log("Reading digital:   ", data);
+        });
 
-        board.pinMode(1, board.MODES.ANALOG);
-        board.analogRead(1, function(data){
-            console.log("Reading analog:   ", data);
-        });
-        board.pinMode(2, board.MODES.ANALOG);
-        board.analogRead(2, function(data){
-            console.log("Reading analog:   ", data);
-        });
-    }, 3000);
+    }, 2500);
+
     setTimeout(function(){
         console.log("send start")
         board.start();
-    }, 4000);
+    }, 3000);
 
 
 
@@ -103,9 +79,9 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
 });
 
 function sendCloud(dataframe){
-        var req = https.request(options, function (res) {
+    var req = https.request(options, function (res) {
 
-      //  console.log("statusCode: ", res.statusCode, dataframe.t);
+        //  console.log("statusCode: ", res.statusCode, dataframe.t);
         //console.log("headers: ", res.headers);
         if(res.statusCode != 200) {
             console.log("statusCode != 200", res.statusCode);
@@ -127,13 +103,15 @@ function sendCloud(dataframe){
         req.write(JSON.stringify(dataframe));
     });
     req.on("close",function(){
-      //  console.log("Connection closed", dataframe.t);
+        //  console.log("Connection closed", dataframe.t);
     })
 
     req.write(JSON.stringify(dataframe),function(){
-       // console.log("request write", dataframe.t);
+        // console.log("request write", dataframe.t);
     });
     req.end();
 
 
-}
+}/**
+ * Created by arturo on 9/07/15.
+ */
