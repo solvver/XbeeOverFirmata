@@ -57,20 +57,18 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
         if(data.pin==0){
 
             dataframe = buildSolvviewDataFrame();
-            dataframe.b.m.id="3_1_1"
+            dataframe.b.m.id="3_1_2"
             dataframe.b.m.ts = (data.TS);
             dataframe.t= new Date (data.TS);
             for(var i=0;i<data.SC;i++) {
                 dataframe.b.y[i] = (100*(data.samples[i]+0.12))+8000;
             }
-            console.log(dataframe);
-
             sendCloud(dataframe);
 
         }
         if(data.pin==1){
             dataframe = buildSolvviewDataFrame();
-            dataframe.b.m.id="3_1_2"
+            dataframe.b.m.id="3_1_3"
             dataframe.b.m.ts = (data.TS);
             dataframe.t= new Date (data.TS);
             for(var i=0;i<data.SC;i++) {
@@ -81,7 +79,7 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
         }
         if(data.pin==2){
             dataframe = buildSolvviewDataFrame();
-            dataframe.b.m.id="3_1_3"
+            dataframe.b.m.id="3_1_4"
             dataframe.b.m.ts = (data.TS);
             dataframe.t= new Date (data.TS);
             for(var i=0;i<data.SC;i++) {
@@ -92,8 +90,8 @@ var board=new firmata.Board("/dev/ttyUSB0", function(err){
         }
         if(data.pin==3){
             dataframe = buildSolvviewDataFrame();
-            dataframe.b.m.id="3_1_4"
-            dataframe.b.m.ts = (data.TS);
+            dataframe.b.m.id="3_1_1"
+            dataframe.b.m.ts = (data.T);
             dataframe.t= new Date (data.TS);
             for(var i=0;i<data.SC;i++) {
                 dataframe.b.y[i] = data.samples[i]*10;
